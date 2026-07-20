@@ -127,12 +127,18 @@ main { position: relative; z-index: 1; }
   background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16);
   color: rgba(255,255,255,.92); font-weight: 800; letter-spacing: .02em; margin-bottom: 18px;
 }
+.hero-copy {
+  color: #fff;
+  max-width: 1120px;
+  padding-right: 28px;
+}
+
 .hero h1 {
   margin: 0;
-  font-size: clamp(2.5rem, 4.6vw, 4.7rem);
-  line-height: 1.0;
-  letter-spacing: -0.06em;
-  max-width: 12ch;
+  font-size: clamp(2rem, 2.8vw, 3.2rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  max-width: 22ch;
 }
 .hero p {
   margin: 18px 0 0;
@@ -609,6 +615,8 @@ main { position: relative; z-index: 1; }
 }
 
 @media (max-width: 520px) {
+  .hero h1 { font-size: clamp(1.9rem, 8.5vw, 3rem); }
+}
   .owner-modal-card { width: min(94vw, 420px); }
   .owner-actions-row { gap: 6px; }
   .owner-sm { width: auto; flex: 1 1 46%; }
