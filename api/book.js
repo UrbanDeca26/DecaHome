@@ -63,7 +63,6 @@ module.exports = async function handler(req, res) {
     const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465;
     const user = process.env.SMTP_USER || '';
     const pass = process.env.SMTP_PASS || '';
-    const publicSiteUrl = String(process.env.PUBLIC_SITE_URL || '').trim().replace(/\/$/, '');
 
     if (!host || !hostEmail) {
       return res.status(500).json({ error: 'Missing SMTP_HOST or BOOKING_TO' });
@@ -97,10 +96,6 @@ module.exports = async function handler(req, res) {
       auth: user ? { user, pass } : undefined,
     });
 
-    const reviewLink = publicSiteUrl
-      ? `${publicSiteUrl}/?review_token=${encodeURIComponent(reviewToken)}&email=${encodeURIComponent(guestEmail)}`
-      : '';
-
     const subject = `[Luxury Stay] Booking inquiry from ${guestName}`;
     const text = [
       'New booking inquiry',
@@ -112,9 +107,9 @@ module.exports = async function handler(req, res) {
       `Guests: ${guests}`,
       `Note: ${note || '—'}`,
       '',
-      `Review token: ${reviewToken}`,
-      reviewLink ? `Review link: ${reviewLink}` : '',
-    ].filter(Boolean).join('\n');
+      `Review code: ${reviewToken}`,
+      'Send this code to the guest after the stay is completed.',
+    ].join('\n');
 
     const html = `
       <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#1f2937">
@@ -127,8 +122,8 @@ module.exports = async function handler(req, res) {
         <p><strong>Guests:</strong> ${esc(guests)}</p>
         <p><strong>Note:</strong><br>${esc(note || '—').replace(/\n/g, '<br>')}</p>
         <hr style="margin:16px 0;border:0;border-top:1px solid #e5e7eb" />
-        <p><strong>Review token:</strong> ${esc(reviewToken)}</p>
-        ${reviewLink ? `<p><strong>Review link:</strong> <a href="${esc(reviewLink)}">${esc(reviewLink)}</a></p>` : ''}
+        <p><strong>Review code:</strong> <span style="font-size:1.05rem;font-weight:700;letter-spacing:.06em">${esc(reviewToken)}</span></p>
+        <p>Send this code to the guest after the stay is completed.</p>
       </div>`;
 
     await transporter.sendMail({
@@ -139,29 +134,6 @@ module.exports = async function handler(req, res) {
       html,
       replyTo: guestEmail,
     });
-
-    if (reviewLink) {
-      await transporter.sendMail({
-        from: hostFrom,
-        to: guestEmail,
-        subject: '[Luxury Stay] Your review code',
-        text: [
-          `Thanks for your inquiry, ${guestName}.`,
-          '',
-          'Use this code to leave a verified review after your stay:',
-          reviewToken,
-          '',
-          `Review link: ${reviewLink}`,
-        ].join('\n'),
-        html: `
-          <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#1f2937">
-            <h2 style="margin:0 0 12px">Thanks for your inquiry</h2>
-            <p>Use this code to leave a verified review after your stay:</p>
-            <p style="font-size:1.2rem;font-weight:700;letter-spacing:.08em">${esc(reviewToken)}</p>
-            <p>${esc(reviewLink)}</p>
-          </div>`,
-      });
-    }
 
     return res.status(200).json({ ok: true, reviewToken });
   } catch (err) {
