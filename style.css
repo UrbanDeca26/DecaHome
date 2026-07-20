@@ -53,11 +53,11 @@ button { cursor: pointer; }
 
 .topbar {
   position: sticky; top: 16px; z-index: 40;
-  width: min(1280px, calc(100% - 40px));
-  margin: 16px auto 0;
+  width: min(1440px, calc(100% - 24px));
+  margin: 8px auto 0;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 12px 22px;
-  border-radius: 22px;
+  padding:16px 30px;
+  border-radius:14px;
   border: 1px solid rgba(255,255,255,.56);
   background: rgba(255,255,255,.84);
   backdrop-filter: blur(20px) saturate(160%);
@@ -72,7 +72,7 @@ button { cursor: pointer; }
 }
 .brand-copy strong { display: block; line-height: 1.1; }
 .brand-copy small { display: block; margin-top: 2px; color: var(--muted); }
-.navlinks { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; color: var(--muted); font-weight: 700; }
+.navlinks { display: flex; flex-wrap: wrap; align-items: center; gap: 28px; color: var(--muted); font-weight: 700; }
 .navlinks a:hover { color: var(--text); }
 .topbar-actions { display: flex; align-items: center; gap: 10px; }
 
@@ -176,7 +176,7 @@ main { position: relative; z-index: 1; }
   padding: 9px 13px; border-radius: 999px; font-weight: 900; font-size: .9rem;
   background: rgba(255,90,95,.1); border: 1px solid rgba(255,90,95,.2); color: var(--accent-2);
 }
-.host-line { margin: 16px 0 16px; color: var(--text); font-weight: 800; letter-spacing: -.01em; }
+.host-line { margin: 8px auto 0; color: var(--text); font-weight: 800; letter-spacing: -.01em; }
 .booking-note-box {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px;
 }
