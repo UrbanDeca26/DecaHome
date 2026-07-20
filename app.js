@@ -4,6 +4,8 @@
 
   const CONFIG = {
     bookingEndpoint: '/api/book',
+    reviewsSubmitEndpoint: '/api/reviews-submit',
+    reviewsListEndpoint: '/api/reviews-list',
     adminLoginEndpoint: '/api/admin-login',
     adminLogoutEndpoint: '/api/admin-logout',
     adminStatusEndpoint: '/api/admin-status',
@@ -161,6 +163,7 @@
     galleryIndex: 0,
     settings: loadJson('luxury_stay_settings_v4', PROPERTY),
     comments: loadJson('luxury_stay_reviews_v4', DEFAULT_COMMENTS),
+    verifiedReviews: loadJson('luxury_stay_verified_reviews_v1', []),
     media: loadJson('luxury_stay_media_v4', DEFAULT_MEDIA),
     amenities: loadJson('luxury_stay_amenities_v4', DEFAULT_AMENITIES),
     admin: false,
@@ -185,6 +188,7 @@
   }
 
   function persistComments() { saveJson('luxury_stay_reviews_v4', state.comments); }
+  function persistVerifiedReviews() { saveJson('luxury_stay_verified_reviews_v1', state.verifiedReviews); }
   function persistMedia() { saveJson('luxury_stay_media_v4', state.media); }
   function persistAmenities() { saveJson('luxury_stay_amenities_v4', state.amenities); }
   function persistSettings() { saveJson('luxury_stay_settings_v4', state.settings); }
@@ -255,6 +259,29 @@
       secondary: pricing[1] || pricing[0] || 'Pricing available in the guide',
       tertiary: pricing[2] || pricing[1] || pricing[0] || 'Pricing available in the guide',
     };
+  }
+
+  async function loadVerifiedReviews() {
+    try {
+      const res = await fetch(CONFIG.reviewsListEndpoint);
+      const data = await res.json().catch(() => ({}));
+      const reviews = Array.isArray(data.reviews) ? data.reviews : [];
+      state.verifiedReviews = reviews.map((r) => ({
+        id: r.id,
+        name: r.guest_name,
+        rating: Number(r.rating || 5),
+        stayType: r.stay_type || 'Guest',
+        text: r.review || '',
+        featured: !!r.featured,
+        hidden: !!r.hidden,
+        source: 'verified',
+        ts: r.created_at ? Date.parse(r.created_at) || Date.now() : Date.now(),
+      }));
+      persistVerifiedReviews();
+      renderComments();
+    } catch (_) {
+      state.verifiedReviews = loadJson('luxury_stay_verified_reviews_v1', []);
+    }
   }
 
   function currentPropertySnapshot() {
@@ -567,10 +594,17 @@
   }
 
   function getVisibleComments() {
-    return state.comments
+    const local = state.comments
       .filter((item) => !item.hidden)
       .slice()
       .sort((a, b) => Number(b.featured) - Number(a.featured) || Number(b.ts || 0) - Number(a.ts || 0));
+
+    const verified = (state.verifiedReviews || [])
+      .filter((item) => !item.hidden)
+      .slice()
+      .sort((a, b) => Number(b.featured) - Number(a.featured) || Number(b.ts || 0) - Number(a.ts || 0));
+
+    return [...local, ...verified];
   }
 
   function getVisibleAmenities() {
@@ -711,6 +745,51 @@
     if (!item || !img) return;
     img.src = item.src;
     img.alt = item.alt;
+  }
+
+  function upgradeCommentForm() {
+    const form = $('#commentForm');
+    if (!form || form.dataset.upgraded === '1') return;
+    form.dataset.upgraded = '1';
+    form.innerHTML = `
+      <h3>Share your stay</h3>
+      <label>
+        Your name
+        <input id="commentName" type="text" placeholder="Your name" required />
+      </label>
+      <div class="row">
+        <label>
+          Your email
+          <input id="commentEmail" type="email" placeholder="Email used for your inquiry" required />
+        </label>
+        <label>
+          Review code
+          <input id="commentToken" type="text" placeholder="Code from your confirmation email" required />
+        </label>
+      </div>
+      <div class="row">
+        <label>
+          Rating
+          <select id="commentRating" required>
+            <option value="5">5 stars</option>
+            <option value="4">4 stars</option>
+            <option value="3">3 stars</option>
+            <option value="2">2 stars</option>
+            <option value="1">1 star</option>
+          </select>
+        </label>
+        <label>
+          Stay type
+          <input id="commentStayType" type="text" placeholder="Family trip, work trip..." />
+        </label>
+      </div>
+      <label>
+        Comment
+        <textarea id="commentText" placeholder="Tell future guests what you liked about the stay..." required></textarea>
+      </label>
+      <button class="btn btn-primary full" type="submit">Post comment</button>
+      <p class="muted">Only verified guests with a valid review code can post a review.</p>
+    `;
   }
 
   function renderComments() {
@@ -1360,29 +1439,48 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
 
     $('#reserveBtn')?.addEventListener('click', submitBooking);
 
-    $('#commentForm')?.addEventListener('submit', (e) => {
+    $('#commentForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const name = String($('#commentName')?.value || '').trim();
+      const guestName = String($('#commentName')?.value || '').trim();
+      const guestEmail = String($('#commentEmail')?.value || '').trim().toLowerCase();
+      const reviewToken = String($('#commentToken')?.value || '').trim();
       const rating = Number($('#commentRating')?.value || 5);
       const stayType = String($('#commentStayType')?.value || '').trim();
-      const text = String($('#commentText')?.value || '').trim();
-      if (!name || !text) return;
-      state.comments.unshift({
-        id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        name,
-        rating: Number.isFinite(rating) ? rating : 5,
-        stayType: stayType || 'Guest',
-        text,
-        ts: Date.now(),
-        featured: false,
-        hidden: false,
-        source: 'guest',
-      });
-      state.comments = state.comments.slice(0, 40);
-      persistComments();
-      renderComments();
-      renderOwnerComments();
-      e.target.reset();
+      const review = String($('#commentText')?.value || '').trim();
+      if (!guestName || !guestEmail || !reviewToken || !review) return;
+
+      const btn = e.target.querySelector('button[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Posting...';
+      }
+
+      try {
+        const res = await fetch(CONFIG.reviewsSubmitEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guestName,
+            guestEmail,
+            reviewToken,
+            rating,
+            stayType: stayType || 'Guest',
+            review,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Failed to submit review');
+        alert('Your verified review was submitted.');
+        e.target.reset();
+        await loadVerifiedReviews();
+      } catch (err) {
+        alert(err.message || 'Could not submit review');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Post comment';
+        }
+      }
     });
 
     $('#openAllPhotos')?.addEventListener('click', () => {
@@ -1445,9 +1543,10 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     $('#ownerLogoutBtn')?.addEventListener('click', logoutOwner);
   }
 
-  function renderInitialState() {
+  async function renderInitialState() {
     state.settings = normalizeSettings(state.settings);
     applySettingsToPublicUI();
+    upgradeCommentForm();
     renderGuide();
     renderGallery();
     renderVideos();
@@ -1459,6 +1558,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     bindOwnerEvents();
     ensureOwnerSectionVisible();
     syncAdminStatus();
+    await loadVerifiedReviews();
   }
 
   document.addEventListener('DOMContentLoaded', renderInitialState);
