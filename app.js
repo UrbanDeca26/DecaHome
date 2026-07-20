@@ -808,6 +808,41 @@
     }
   }
 
+  function getTodayLocalISO() {
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+  }
+
+  function setBookingDateBounds() {
+    const checkin = $('#checkin');
+    const checkout = $('#checkout');
+    if (!checkin || !checkout) return;
+
+    const today = getTodayLocalISO();
+    checkin.min = today;
+
+    const syncCheckoutMin = () => {
+      const inValue = checkin.value || today;
+      checkout.min = inValue > today ? inValue : today;
+      if (checkout.value && checkout.value < checkout.min) {
+        checkout.value = checkout.min;
+      }
+    };
+
+    syncCheckoutMin();
+    checkin.addEventListener('change', syncCheckoutMin);
+    checkin.addEventListener('input', syncCheckoutMin);
+  }
+
+  function validateBookingDates(checkinValue, checkoutValue) {
+    const today = getTodayLocalISO();
+    if (!checkinValue || !checkoutValue) return { ok: false, message: 'Please select both check-in and check-out dates.' };
+    if (checkinValue < today) return { ok: false, message: 'Check-in date cannot be in the past.' };
+    if (checkoutValue <= checkinValue) return { ok: false, message: 'Check-out date must be after check-in date.' };
+    return { ok: true };
+  }
+
   async function submitBooking(e) {
     e.preventDefault();
     const payload = {
@@ -819,6 +854,12 @@
       guests: String($('#guests')?.value || '').trim(),
       note: String($('#guestNote')?.value || '').trim(),
     };
+
+    const dateCheck = validateBookingDates(payload.checkin, payload.checkout);
+    if (!dateCheck.ok) {
+      alert(dateCheck.message);
+      return;
+    }
 
     const btn = $('#reserveBtn');
     if (!payload.guestName || !payload.guestEmail || !payload.checkin || !payload.checkout || !payload.guests) {
@@ -1478,6 +1519,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     renderVideos();
     renderAmenities();
     renderComments();
+    setBookingDateBounds();
     setupMap();
     setupRevealObserver();
     bindPublicEvents();
