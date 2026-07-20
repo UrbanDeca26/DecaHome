@@ -56,3 +56,8 @@ The owner tools appear only after signing in from the bottom of the page. The re
 ## Luna concierge
 
 The chat now acts as Luna, the virtual concierge. It routes guests to the correct site section and can send an inquiry email when the question is not listed on the page.
+
+
+## Replacement package
+
+This ZIP includes the complete set of files needed to replace the current site code.

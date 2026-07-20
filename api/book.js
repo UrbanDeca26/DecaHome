@@ -1,12 +1,4 @@
-const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const { getSupabase } = require('../lib/supabase');
-
-function todayISO() {
-  const d = new Date();
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().slice(0, 10);
-}
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -35,9 +27,8 @@ module.exports = async function handler(req, res) {
 
     let body = req.body;
     if (!body || typeof body !== 'object') body = await readBody(req);
-
     const guestName = String(body.guestName || '').trim();
-    const guestEmail = String(body.guestEmail || '').trim().toLowerCase();
+    const guestEmail = String(body.guestEmail || '').trim();
     const guestPhone = String(body.guestPhone || '').trim();
     const checkin = String(body.checkin || '').trim();
     const checkout = String(body.checkout || '').trim();
@@ -46,14 +37,6 @@ module.exports = async function handler(req, res) {
 
     if (!guestName || !guestEmail || !checkin || !checkout || !guests) {
       return res.status(400).json({ error: 'Missing booking details' });
-    }
-
-    if (checkin < todayISO()) {
-      return res.status(400).json({ error: 'Check-in date cannot be in the past' });
-    }
-
-    if (checkout <= checkin) {
-      return res.status(400).json({ error: 'Check-out must be after check-in' });
     }
 
     const hostEmail = process.env.BOOKING_TO || process.env.ALERT_TO || process.env.SMTP_TO;
@@ -66,27 +49,6 @@ module.exports = async function handler(req, res) {
 
     if (!host || !hostEmail) {
       return res.status(500).json({ error: 'Missing SMTP_HOST or BOOKING_TO' });
-    }
-
-    const supabase = getSupabase();
-    const bookingId = crypto.randomUUID();
-    const reviewToken = crypto.randomBytes(24).toString('hex');
-
-    const { error: insertError } = await supabase.from('bookings').insert([{
-      id: bookingId,
-      guest_name: guestName,
-      guest_email: guestEmail,
-      guest_phone: guestPhone || null,
-      checkin,
-      checkout,
-      guests,
-      note: note || null,
-      review_token: reviewToken,
-      review_submitted: false,
-    }]);
-
-    if (insertError) {
-      return res.status(500).json({ error: insertError.message || 'Failed to store booking' });
     }
 
     const transporter = nodemailer.createTransport({
@@ -106,9 +68,6 @@ module.exports = async function handler(req, res) {
       `Check-out: ${checkout}`,
       `Guests: ${guests}`,
       `Note: ${note || '—'}`,
-      '',
-      `Review code: ${reviewToken}`,
-      'Send this code to the guest after the stay is completed.',
     ].join('\n');
 
     const html = `
@@ -121,9 +80,6 @@ module.exports = async function handler(req, res) {
         <p><strong>Check-out:</strong> ${esc(checkout)}</p>
         <p><strong>Guests:</strong> ${esc(guests)}</p>
         <p><strong>Note:</strong><br>${esc(note || '—').replace(/\n/g, '<br>')}</p>
-        <hr style="margin:16px 0;border:0;border-top:1px solid #e5e7eb" />
-        <p><strong>Review code:</strong> <span style="font-size:1.05rem;font-weight:700;letter-spacing:.06em">${esc(reviewToken)}</span></p>
-        <p>Send this code to the guest after the stay is completed.</p>
       </div>`;
 
     await transporter.sendMail({
@@ -135,7 +91,7 @@ module.exports = async function handler(req, res) {
       replyTo: guestEmail,
     });
 
-    return res.status(200).json({ ok: true, reviewToken });
+    return res.status(200).json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Failed to send booking inquiry' });
   }
