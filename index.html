@@ -1,0 +1,318 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Luxury Stay | Comfort • Convenience • Home Away From Home</title>
+  <meta name="description" content="Premium condo booking site with a refined hero, glass amenities, exact location, house rules, pricing guide, reviews, and an editable owner dashboard." />
+  <meta name="theme-color" content="#ff5a5f" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+  <div class="bg-orb orb-c"></div>
+
+	  <header class="topbar">
+		<a class="brand" href="#hero" aria-label="Luxury Stay home">
+		  <span class="brand-mark">LS</span>
+		  <span class="brand-copy">
+			<strong>Luxury Stay</strong>
+			<small>Comfort • Convenience • Home Away From Home</small>
+		  </span>
+		</a>
+
+    <nav class="navlinks" aria-label="Primary">
+      <a href="#gallery">Gallery</a>
+      <a href="#amenities">Amenities</a>
+      <a href="#guide">Guide</a>
+      <a href="#reviews">Reviews</a>
+            <a href="#concierge">Ask</a>
+    </nav>
+
+    <div class="topbar-actions">
+      <a class="btn btn-ghost" href="#booking">Reserve</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="hero">
+      <video class="hero-video" autoplay muted loop playsinline poster="./assets/9.jpg">
+        <source src="./assets/tour-02.mp4" type="video/mp4" />
+      </video>
+      <div class="hero-overlay"></div>
+
+      <div class="hero-shell">
+        <div class="hero-copy reveal">
+          <div class="eyebrow">Urban Deca Homes Ortigas Extension • Pasig City • Up to 9 guests</div>
+          <h2>A calm, polished stay for families, friends, and city breaks.</h2>
+          <p>
+            A guest-ready condo with hotel-style essentials, self check-in, fast Wi‑Fi, and a location that keeps the whole group close to Ortigas.
+          </p>
+
+          <div class="hero-values" aria-label="Core values">
+            <div class="value-card"><strong>Up to 9 guests</strong><span>Flexible for family or barkada stays.</span></div>
+            <div class="value-card"><strong>Self check-in</strong><span>Tap-card entry with simple arrival steps.</span></div>
+            <div class="value-card"><strong>Fast Wi‑Fi</strong><span>100 Mbps connection for streaming and work.</span></div>
+            <div class="value-card"><strong>Ortigas location</strong><span>Close to malls, food, and essentials.</span></div>
+          </div>
+
+          <div class="mini-stats">
+            <article><strong>1:00 PM</strong><span>Check-in onward</span></article>
+            <article><strong>11:00 AM</strong><span>Checkout next day</span></article>
+            <article><strong>₱1,000</strong><span>Refundable deposit</span></article>
+          </div>
+        </div>
+
+        <aside class="booking-card reveal" id="booking">
+          <div class="booking-grid">
+            <label>Check-in date
+              <input id="checkin" type="date" />
+            </label>
+            <label>Check-out date
+              <input id="checkout" type="date" />
+            </label>
+            <label>Guests
+              <select id="guests">
+                <option>1 guest</option>
+                <option>2 guests</option>
+                <option>3 guests</option>
+                <option>4 guests</option>
+                <option>5 guests</option>
+                <option>6 guests</option>
+                <option>7 guests</option>
+                <option>8 guests</option>
+                <option>9 guests</option>
+              </select>
+            </label>
+            <label>Your name
+              <input id="guestName" type="text" placeholder="Enter your name" />
+            </label>
+            <label>Your email
+              <input id="guestEmail" type="email" placeholder="Enter your email" />
+            </label>
+            <label>Phone number
+              <input id="guestPhone" type="tel" placeholder="Optional" />
+            </label>
+            <label class="span-2">Special request
+              <textarea id="guestNote" rows="3" placeholder="Add any details for the host..."></textarea>
+            </label>
+          </div>
+          <button class="btn btn-primary full" id="reserveBtn" type="button">Check availability</button>
+        </aside>
+
+      </div>
+    </section>
+
+    <section class="section reveal" id="gallery">
+      <div class="section-head row">
+        <div>
+          <span>Gallery</span>
+          <h2>Take a closer look at your home away from home.</h2>
+          <p>Browse photos and video tours to explore every corner of the unit before your arrival.</p>
+        </div>
+        <button class="text-btn" id="openAllPhotos">View gallery</button>
+      </div>
+      <div class="gallery-spotlight" id="galleryGrid"></div>
+    </section>
+
+    <section class="section reveal" id="videos">
+      <div class="section-head">
+        <span>Video tours</span>
+        <h2>Short walkthroughs for a quick first look.</h2>
+      </div>
+      <div class="video-grid" id="videoGrid"></div>
+    </section>
+
+    <section class="section reveal" id="amenities">
+      <div class="section-head">
+        <span>Included in your stay</span>
+        <h2>Everything you need for a comfortable and enjoyable stay.</h2>
+        <p>Enjoy all the amenities included with your stay.</p>
+      </div>
+      <div class="amenity-preview" id="amenityPreview"></div>
+      <div class="section-actions">
+        <button class="btn btn-primary" id="openAmenities">View amenities</button>
+      </div>
+    </section>
+
+    <section class="section reveal" id="guide">
+      <div class="section-head">
+        <span>Stay guide</span>
+        <h2>Everything you need to know before and during your stay.</h2>
+        <p>Find everything you need to make your stay smooth and enjoyable.</p>
+      </div>
+      <div class="guide-grid" id="guideGrid"></div>
+    </section>
+
+    <section class="section reveal" id="reviews">
+      <div class="section-head">
+        <span>Guest reviews</span>
+        <h2>See what previous guests loved about their stay.</h2>
+      </div>
+      <div class="review-grid">
+        <article class="review-card">
+          <div class="stars">★★★★★</div>
+          <p>The place looks exactly like the photos. Very clean, organized, and easy to enjoy.</p>
+          <strong>Guest favorite</strong>
+        </article>
+        <article class="review-card">
+          <div class="stars">★★★★★</div>
+          <p>The layout, lighting, and finishes make the stay feel polished and comfortable.</p>
+          <strong>Top rated stay</strong>
+        </article>
+        <article class="review-card">
+          <div class="stars">★★★★★</div>
+          <p>Great for work trips and family weekends. Check-in was easy and everything was ready.</p>
+          <strong>Repeat guest</strong>
+        </article>
+      </div>
+
+      <div class="comment-shell">
+        <div>
+          <div class="section-head compact">
+            <span>Guest comments</span>
+            <h2>Leave a review</h2>
+          </div>
+          <div class="comment-list" id="commentList"></div>
+        </div>
+
+        <form class="comment-form" id="commentForm">
+          <h3>Share your stay</h3>
+          <label>
+            Your name
+            <input id="commentName" type="text" placeholder="Your name" required />
+          </label>
+          <div class="row">
+            <label>
+              Rating
+              <select id="commentRating" required>
+                <option value="5">5 stars</option>
+                <option value="4">4 stars</option>
+                <option value="3">3 stars</option>
+                <option value="2">2 stars</option>
+                <option value="1">1 star</option>
+              </select>
+            </label>
+            <label>
+              Stay type
+              <input id="commentStayType" type="text" placeholder="Family trip, work trip..." />
+            </label>
+          </div>
+          <label>
+            Comment
+            <textarea id="commentText" placeholder="Tell future guests what you liked about the stay..." required></textarea>
+          </label>
+          <button class="btn btn-primary full" type="submit">Post comment</button>
+          <p class="muted">Comments are saved in this browser so you can test the section right away.</p>
+        </form>
+      </div>
+    </section>
+
+    <section class="section reveal concierge" id="concierge">
+      <div class="section-head compact">
+        <span>Ask before you book</span>
+        <h2>Quick answers in a compact chat.</h2>
+      </div>
+      <div class="concierge-box compact">
+        <div class="chat-log" id="chatLog">
+          <div class="chat-msg bot">Ask about the exact location, house rules, pricing, parking, or check-in steps.</div>
+        </div>
+        <div class="chat-input-row">
+          <input id="chatInput" type="text" placeholder="Ask about parking, Wi‑Fi, guests, or check-in..." />
+          <button class="btn btn-primary" id="sendChat">Send</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <section class="section owner-panel hidden" id="ownerPanel" aria-hidden="true">
+    <div class="section-head">
+      <span>Owner dashboard</span>
+      <h2>Manage reviews, media, and amenities</h2>
+      <p>Update the listing content without touching the code.</p>
+    </div>
+    <div class="owner-grid">
+      <article class="owner-card">
+        <div class="owner-card-head">
+          <h3>Property settings</h3>
+          <p>Edit location, prices, capacity, and policies from one form.</p>
+        </div>
+        <div id="ownerSettingsList"></div>
+      </article>
+
+      <article class="owner-card">
+        <div class="owner-card-head">
+          <h3>Amenity manager</h3>
+          <p>Add, edit, hide, or delete amenity cards.</p>
+        </div>
+        <div id="ownerAmenityList"></div>
+      </article>
+
+      <article class="owner-card">
+        <div class="owner-card-head">
+          <h3>Review manager</h3>
+          <p>Add, edit, feature, hide, or delete guest comments.</p>
+        </div>
+        <div id="ownerReviewList"></div>
+      </article>
+
+      <article class="owner-card">
+        <div class="owner-card-head">
+          <h3>Media manager</h3>
+          <p>Upload or remove photos and videos from the gallery.</p>
+        </div>
+        <div id="ownerMediaList"></div>
+      </article>
+    </div>
+
+    <div class="owner-actions-bar">
+      <button class="btn btn-ghost" id="ownerLogoutBtn" type="button">Log out</button>
+    </div>
+  </section>
+
+
+  <div class="site-modal" id="amenitiesModal" aria-hidden="true">
+    <div class="site-modal-card" role="dialog" aria-modal="true" aria-labelledby="amenitiesModalTitle">
+      <button class="site-modal-close" id="closeAmenities" type="button" aria-label="Close amenities">×</button>
+      <div class="owner-modal-kicker">Amenities</div>
+      <h3 id="amenitiesModalTitle">Full amenity list</h3>
+      <p>Enjoy all the amenities included with your stay.</p>
+      <div class="amenity-modal-grid" id="amenitiesModalList"></div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div>
+      <strong>Luxury Stay</strong>
+      <p>Comfort • Convenience • Home Away From Home</p>
+    </div>
+    <div class="footer-actions"><a href="#hero">Back to top</a><span class="footer-copyright" id="footerCopyright">© 2026 Luxury Stay</span></div>
+  </footer>
+
+  <div class="owner-modal" id="ownerLoginModal" aria-hidden="true">
+    <div class="owner-modal-card" role="dialog" aria-modal="true" aria-labelledby="ownerLoginTitle">
+      <button class="owner-modal-close" id="closeOwnerModal" type="button" aria-label="Close owner login">×</button>
+      <div class="owner-modal-kicker">Private access</div>
+      <h3 id="ownerLoginTitle">Owner login</h3>
+      <p>Enter the owner password to unlock the dashboard.</p>
+      <form id="ownerLoginForm" class="owner-login-form">
+        <label>Password
+          <input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Enter password" />
+        </label>
+        <button class="btn btn-primary full" id="ownerLoginSubmit" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="lightbox" id="lightbox" aria-hidden="true">
+    <button class="lightbox-close" id="closeLightbox" aria-label="Close gallery">×</button>
+    <button class="lightbox-nav prev" id="prevPhoto" aria-label="Previous photo">‹</button>
+    <img id="lightboxImg" alt="Gallery image" />
+    <button class="lightbox-nav next" id="nextPhoto" aria-label="Next photo">›</button>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
