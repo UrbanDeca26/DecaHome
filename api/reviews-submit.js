@@ -4,7 +4,6 @@ const { getSupabase } = require('../lib/supabase');
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
-
     req.on('data', chunk => {
       data += chunk;
     });
@@ -56,6 +55,12 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        error: 'Rating must be between 1 and 5'
+      });
+    }
+
     const supabase = getSupabase();
 
     const { data: booking, error } = await supabase
@@ -89,7 +94,7 @@ module.exports = async function handler(req, res) {
             guest_name: guestName,
             guest_email: guestEmail,
             rating,
-            stay_type: stayType,
+            stay_type: stayType || 'Guest',
             review,
             featured: false,
             hidden: false
