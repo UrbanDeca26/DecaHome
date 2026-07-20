@@ -784,6 +784,30 @@
     }
   }
 
+  function resetBookingForm() {
+    const fields = [
+      '#guestName',
+      '#guestEmail',
+      '#guestPhone',
+      '#checkin',
+      '#checkout',
+      '#guestNote',
+    ];
+
+    fields.forEach((selector) => {
+      const el = $(selector);
+      if (el) el.value = '';
+    });
+
+    const guests = $('#guests');
+    if (guests) guests.selectedIndex = 0;
+
+    const form = $('#reserveBtn')?.closest('form');
+    if (form && typeof form.reset === 'function') {
+      form.reset();
+    }
+  }
+
   async function submitBooking(e) {
     e.preventDefault();
     const payload = {
@@ -816,10 +840,7 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to send booking inquiry');
       alert('Your request has been sent to the host.');
-      const form = e.currentTarget;
-      if (form && typeof form.reset === 'function') {
-        form.reset();
-      }
+      resetBookingForm();
     } catch (err) {
       alert(`${err.message}
 
