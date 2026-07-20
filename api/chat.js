@@ -89,19 +89,242 @@ function normalizeProperty(source) {
   return out;
 }
 
+function normalizeAmenities(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => ({
+    title: String(item?.title || '').trim(),
+    category: String(item?.category || 'Amenity').trim(),
+    description: String(item?.description || '').trim(),
+  })).filter((item) => item.title || item.description);
+}
+
+function reply(payload) {
+  return { ...payload, intent: payload.intent || 'property_info', risk: payload.risk || 'low' };
+}
+
+function navReply(property, message, sectionId, openTopic, body, suggestions = []) {
+  const replyText = body || `You can find that in ${sectionId === 'guide' ? 'Guide' : sectionId.charAt(0).toUpperCase() + sectionId.slice(1)}${openTopic ? ` → ${openTopic}` : ''}.`;
+  return reply({
+    reply: replyText,
+    intent: 'navigate',
+    sectionId,
+    openTopic,
+    suggestions,
+    showInquiryForm: false,
+  });
+}
+
+function inquiryReply(text, suggestions = []) {
+  return reply({
+    reply: text || 'I could not find that detail on the site yet. You can send a message to the host below.',
+    intent: 'escalate',
+    showInquiryForm: true,
+    suggestions,
+  });
+}
+
 function localAnswer(property, amenities, message) {
   const q = String(message || '').toLowerCase();
-  const a = Array.isArray(amenities) ? amenities : [];
-  if (/location|where|address|map|quezon|pasig|ortigas/.test(q)) return `${property.area}. ${property.building}. Nearby places include ${property.nearby.join(', ')}.`;
-  if (/parking/.test(q)) return `${property.parking} Parking rates are Car ${property.parkingRates.car} and Motorcycle ${property.parkingRates.motorcycle}.`;
-  if (/price|rate|cost|pricing/.test(q)) return `The listed prices are ${property.pricing.join('; ')}.`;
-  if (/guest|how many|capacity|sleep/.test(q)) return `The unit is set up for ${property.capacity}.`;
-  if (/check.?in|self check|arrival/.test(q)) return `Self check-in starts at ${property.checkIn}. Tap card and lockbox steps are in the guide section.`;
-  if (/checkout|check.?out|leave|departure/.test(q)) return `Checkout is at ${property.checkOut}. Return the tap card and key, turn off appliances, and dispose of trash.`;
-  if (/rule|smok|noise|visitor|pool/.test(q)) return `House rules include ${property.houseRules.join(', ')}.`;
-  if (/require|id|deposit|reservation/.test(q)) return `Booking requirements include ${property.bookingRequirements.join(', ')}.`;
-  if (/amenit|include|what is inside|included/.test(q)) return `Highlighted amenities include ${a.slice(0, 10).map((item) => item.title).join(', ')}.`;
-  return `I can answer about the location, parking, booking requirements, pricing, check-in, checkout, house rules, or amenities using the property details on the page.`;
+
+  if (/location|where|address|map|find|locate|exact location/.test(q)) {
+    return navReply(
+      property,
+      message,
+      'guide',
+      'Exact location',
+      `You can find the exact location in Guide → Exact location. The map links are there too.`,
+      [
+        { label: 'Parking', query: 'What are the parking details?' },
+        { label: 'Pricing', query: 'What is the pricing?' },
+        { label: 'Amenities', query: 'What amenities are included?' },
+      ]
+    );
+  }
+
+  if (/parking/.test(q)) {
+    return navReply(
+      property,
+      message,
+      'guide',
+      'Parking',
+      `Parking details are in Guide → Parking. You will see the availability notes and the car and motorcycle rates there.`,
+      [
+        { label: 'House Rules', query: 'What are the house rules?' },
+        { label: 'Booking requirements', query: 'What are the booking requirements?' },
+        { label: 'Check-in', query: 'How does self check-in work?' },
+      ]
+    );
+  }
+
+  if (/price|rate|cost|pricing/.test(q)) {
+    return navReply(
+      property,
+      message,
+      'guide',
+      'Pricing',
+      `Pricing is listed in Guide → Pricing.`,
+      [
+        { label: 'Location', query: 'Where is the exact location?' },
+        { label: 'Parking', query: 'What are the parking details?' },
+        { label: 'Booking', query: 'How do I book?' },
+      ]
+    );
+  }
+
+  if (/rule|smok|noise|visitor|pool|house/.test(q)) {
+    return navReply(
+      property,
+      message,
+      'guide',
+      'House rules',
+      `House rules are in Guide → House rules.`,
+      [
+        { label: 'Check-in', query: 'How does self check-in work?' },
+        { label: 'Pricing', query: 'What is the pricing?' },
+        { label: 'Amenities', query: 'What amenities are included?' },
+      ]
+    );
+  }
+
+  if (/check.?in|self check|arrival/.test(q)) {
+    return navReply(
+      property,
+      message,
+      'guide',
+      'Self check-in',
+      `Self check-in is in Guide → Self check-in.`,
+      [
+        { label: 'Checkout', query: 'What is the checkout reminder?' },
+        { label: 'Location', query: 'Where is the exact location?' },
+        { label: 'Parking', query: 'What are the parking details?' },
+      ]
+    );
+  }
+
+  if (/checkout|check.?out|leave|departure/.test(q)) {
+    return navReply(
+      property,
+      message,
+      'guide',
+      'Checkout reminder',
+      `Checkout steps are in Guide → Checkout reminder.`,
+      [
+        { label: 'House Rules', query: 'What are the house rules?' },
+        { label: 'Check-in', query: 'How does self check-in work?' },
+        { label: 'Reviews', query: 'Tell me about the reviews.' },
+      ]
+    );
+  }
+
+  if (/amenit|include|what is inside|included/.test(q)) {
+    return navReply(
+      property,
+      message,
+      'amenities',
+      null,
+      `You can find the full list in the Amenities section.`,
+      [
+        { label: 'Gallery', query: 'Show me the gallery.' },
+        { label: 'Reviews', query: 'Tell me about the reviews.' },
+        { label: 'Booking', query: 'How do I book?' },
+      ]
+    );
+  }
+
+  if (/gallery|photo|video|tour|walkthrough/.test(q)) {
+    return navReply(
+      property,
+      message,
+      'gallery',
+      null,
+      `The photos and video tours are in the Gallery and Video tours sections.`,
+      [
+        { label: 'Amenities', query: 'What amenities are included?' },
+        { label: 'Reviews', query: 'Tell me about the reviews.' },
+        { label: 'Location', query: 'Where is the exact location?' },
+      ]
+    );
+  }
+
+  if (/review|comment|testimonial/.test(q)) {
+    return navReply(
+      property,
+      message,
+      'reviews',
+      null,
+      `Guest reviews are in the Reviews section.`,
+      [
+        { label: 'Amenities', query: 'What amenities are included?' },
+        { label: 'Parking', query: 'What are the parking details?' },
+        { label: 'Booking', query: 'How do I book?' },
+      ]
+    );
+  }
+
+  if (/booking requirement|deposit|reservation fee|id|verify/.test(q)) {
+    return navReply(
+      property,
+      message,
+      'guide',
+      'Booking requirements',
+      `Booking requirements are in Guide → Booking requirements.`,
+      [
+        { label: 'Pricing', query: 'What is the pricing?' },
+        { label: 'House Rules', query: 'What are the house rules?' },
+        { label: 'Check-in', query: 'How does self check-in work?' },
+      ]
+    );
+  }
+
+  if (/book|reserve|availability/.test(q)) {
+    return navReply(
+      property,
+      message,
+      'booking',
+      null,
+      `You can use the booking card at the top of the page to send an inquiry.`,
+      [
+        { label: 'Location', query: 'Where is the exact location?' },
+        { label: 'Pricing', query: 'What is the pricing?' },
+        { label: 'Contact Host', query: 'I need to ask the host something not shown on the site.' },
+      ]
+    );
+  }
+
+  if (/children|kids|birthday|decorate|pets|pet|late checkout|early check-in|midnight/.test(q)) {
+    return inquiryReply(
+      `I could not find that detail on the site yet. Please send a message to the host using the inquiry form below.`,
+      [
+        { label: 'Send inquiry', query: 'I need to ask the host something not shown on the site.' },
+        { label: 'Pricing', query: 'What is the pricing?' },
+        { label: 'House Rules', query: 'What are the house rules?' },
+      ]
+    );
+  }
+
+  if (/contact|host|email|message/.test(q)) {
+    return inquiryReply(
+      `Use the inquiry form below to send your message to the host.`,
+      [
+        { label: 'Location', query: 'Where is the exact location?' },
+        { label: 'Amenities', query: 'What amenities are included?' },
+        { label: 'Booking', query: 'How do I book?' },
+      ]
+    );
+  }
+
+  return reply({
+    reply: `I can help with the site sections or, if the detail is not listed, send an inquiry to the host.`,
+    intent: 'help',
+    showInquiryForm: false,
+    suggestions: [
+      { label: 'Location', query: 'Where is the exact location?' },
+      { label: 'Parking', query: 'What are the parking details?' },
+      { label: 'Pricing', query: 'What is the pricing?' },
+      { label: 'Amenities', query: 'What amenities are included?' },
+      { label: 'Contact Host', query: 'I need to ask the host something not shown on the site.' },
+    ],
+  });
 }
 
 module.exports = async function handler(req, res) {
@@ -114,17 +337,26 @@ module.exports = async function handler(req, res) {
     if (!message) return res.status(400).json({ error: 'Missing message' });
 
     const property = normalizeProperty(body.property);
-    const amenities = Array.isArray(body.property?.amenities) ? body.property.amenities : [];
+    const amenities = normalizeAmenities(body.property?.amenities);
+    const local = localAnswer(property, amenities, message);
+
+    // Local navigation / escalation answers take precedence because they map the site directly.
+    if (local.intent === 'navigate' || local.intent === 'escalate') {
+      return res.status(200).json(local);
+    }
+
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({ reply: localAnswer(property, amenities, message), intent: 'property_info', risk: 'low' });
+      return res.status(200).json(local);
     }
 
     const systemPrompt = `
-You are the AI concierge for ${property.name}. Answer only from the supplied property facts.
-If the answer is not in the facts, say you do not have that detail yet and suggest checking the listing or contacting the host.
-Do not invent prices, amenities, parking, or location details.
-Keep answers short, clear, and practical.
+You are Luna, the Luxury Stay virtual concierge.
+Your first job is to guide the guest to the correct section of the site when the answer is already visible there.
+If the site has the exact answer, respond with a short helpful sentence that points to the section.
+If the answer is not on the site, tell the guest to use the inquiry form.
+Do not invent prices, policies, amenities, or location details.
+Keep answers short, warm, and practical.
 
 Property facts:
 - Name: ${property.name}
@@ -141,6 +373,7 @@ Property facts:
 - House rules: ${property.houseRules.join(' | ')}
 - Self check-in: ${property.selfCheckIn.join(' | ')}
 - Checkout: ${property.checkout.join(' | ')}
+- Amenities: ${amenities.slice(0, 12).map((a) => `${a.title} (${a.category})`).join(' | ')}
 `.trim();
 
     const payload = {
@@ -150,7 +383,7 @@ Property facts:
         { role: 'user', content: message },
       ],
       temperature: 0.2,
-      max_completion_tokens: 220,
+      max_completion_tokens: 180,
     };
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -164,12 +397,47 @@ Property facts:
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      return res.status(200).json({ reply: localAnswer(property, amenities, message), intent: 'property_info', risk: 'low' });
+      return res.status(200).json(local);
     }
 
-    const reply = data?.choices?.[0]?.message?.content?.trim() || localAnswer(property, amenities, message);
-    return res.status(200).json({ reply, intent: 'property_info', risk: 'low' });
+    const replyText = String(data?.choices?.[0]?.message?.content || '').trim();
+    const unknown = !replyText || /i (?:don['’]?t|do not|cannot|can't) have|not sure|not listed|use the inquiry form|send an inquiry|contact the host/i.test(replyText);
+    if (unknown) {
+      return res.status(200).json({
+        reply: `I could not find that detail on the site yet. You can send a message to the host using the inquiry form below.`,
+        intent: 'escalate',
+        showInquiryForm: true,
+        suggestions: [
+          { label: 'Location', query: 'Where is the exact location?' },
+          { label: 'Parking', query: 'What are the parking details?' },
+          { label: 'Pricing', query: 'What is the pricing?' },
+          { label: 'Amenities', query: 'What amenities are included?' },
+        ],
+      });
+    }
+
+    return res.status(200).json({
+      reply: replyText,
+      intent: 'property_info',
+      risk: 'low',
+      suggestions: [
+        { label: 'Location', query: 'Where is the exact location?' },
+        { label: 'Parking', query: 'What are the parking details?' },
+        { label: 'House Rules', query: 'What are the house rules?' },
+        { label: 'Contact Host', query: 'I need to ask the host something not shown on the site.' },
+      ],
+    });
   } catch (err) {
-    return res.status(200).json({ reply: localAnswer(normalizeProperty(), [], String((req.body && req.body.message) || '')), intent: 'property_info', risk: 'low' });
+    return res.status(200).json({
+      reply: `I can help with the site sections or send an inquiry if the detail is not listed.`,
+      intent: 'help',
+      risk: 'low',
+      suggestions: [
+        { label: 'Location', query: 'Where is the exact location?' },
+        { label: 'Parking', query: 'What are the parking details?' },
+        { label: 'Pricing', query: 'What is the pricing?' },
+        { label: 'Contact Host', query: 'I need to ask the host something not shown on the site.' },
+      ],
+    });
   }
 };
