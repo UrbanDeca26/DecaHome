@@ -51,3 +51,8 @@ Videos are provided as MP4 files in the `assets` folder:
 ## Notes
 
 The owner tools appear only after signing in from the bottom of the page. The review, media, and amenity managers update the site state in the browser for testing and content management flow.
+
+
+## Luna concierge
+
+The chat now acts as Luna, the virtual concierge. It routes guests to the correct site section and can send an inquiry email when the question is not listed on the page.
