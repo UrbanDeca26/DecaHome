@@ -212,37 +212,18 @@
 
     <section class="section reveal concierge" id="concierge">
       <div class="section-head compact">
-        <span>Meet Luna</span>
-        <h2>Your virtual concierge.</h2>
+        <span>Ask before you book</span>
+        <h2>Quick answers in a compact chat.</h2>
+        <p>Ask Luna about location, parking, pricing, house rules, check-in, amenities, or reviews.</p>
       </div>
       <div class="concierge-box compact">
-        <div class="luna-banner">
-          <div>
-            <span class="luna-kicker">Luna · Luxury Stay Concierge</span>
-            <p>Ask me about the site and I will point you to the right section. If I cannot answer it here, I can help you send an inquiry to the host.</p>
-          </div>
-        </div>
-
-        <div class="chat-quick-actions" id="chatQuickActions" aria-label="Quick topics">
-          <button type="button" class="chat-chip" data-query="Where is the exact location?" data-section="guide" data-topic="Exact location">Location</button>
-          <button type="button" class="chat-chip" data-query="What are the parking details?" data-section="guide" data-topic="Parking">Parking</button>
-          <button type="button" class="chat-chip" data-query="What is the pricing?" data-section="guide" data-topic="Pricing">Pricing</button>
-          <button type="button" class="chat-chip" data-query="What are the house rules?" data-section="guide" data-topic="House rules">House Rules</button>
-          <button type="button" class="chat-chip" data-query="How does self check-in work?" data-section="guide" data-topic="Self check-in">Check-in</button>
-          <button type="button" class="chat-chip" data-query="What amenities are included?" data-section="amenities" data-topic="Amenities">Amenities</button>
-          <button type="button" class="chat-chip" data-query="Tell me about the reviews." data-section="reviews" data-topic="Guest reviews">Reviews</button>
-          <button type="button" class="chat-chip chat-chip-secondary" data-action="contact">Contact Host</button>
-        </div>
-
         <div class="chat-log" id="chatLog">
-          <div class="chat-msg bot">Hi, I’m Luna. I can help you find the right section on the site, answer common questions, or send your inquiry to the host.</div>
+          <div class="chat-msg bot">Hi, I’m Luna. Ask me anything about the stay and I’ll answer here. If I can’t find it, I’ll help you send a message to the host.</div>
         </div>
-
-        <div class="chat-suggestions" id="chatSuggestions" aria-label="Suggested follow-ups"></div>
 
         <div class="chat-input-row">
           <input id="chatInput" type="text" placeholder="Ask Luna about parking, Wi‑Fi, guests, or check-in..." />
-          <button class="btn btn-primary" id="sendChat">Send</button>
+          <button class="btn btn-primary" id="sendChat" type="button">Send</button>
         </div>
 
         <div class="chat-inquiry-panel hidden" id="chatInquiryPanel">

@@ -752,6 +752,23 @@
   }
 
 
+  function isExplicitSectionRequest(question) {
+    const q = String(question || '').toLowerCase();
+    return /\b(open|show|view|go to|take me to|scroll to|jump to)\b/.test(q) || /\b(map|gallery|reviews?|booking|amenit(?:y|ies)|guide)\b/.test(q) && /\b(open|show|view|go to|take me to|scroll to|jump to)\b/.test(q);
+  }
+
+  function sectionLabel(name) {
+    const map = {
+      guide: 'Guide',
+      gallery: 'Gallery',
+      reviews: 'Reviews',
+      amenities: 'Amenities',
+      booking: 'Booking',
+    };
+    return map[name] || name || '';
+  }
+
+
   const LUNA_DEFAULT_SUGGESTIONS = [
     { label: 'Location', query: 'Where is the exact location?' },
     { label: 'Parking', query: 'What are the parking details?' },
@@ -821,13 +838,6 @@
 
   function updateChatFromApi(data, fallbackMessage) {
     const reply = String(data?.reply || '').trim() || localConciergeAnswer(fallbackMessage || '');
-    renderChatSuggestions(Array.isArray(data?.suggestions) && data.suggestions.length ? data.suggestions : LUNA_DEFAULT_SUGGESTIONS);
-
-    if (data?.sectionId === 'guide' && data?.openTopic) {
-      openGuideTopic(data.openTopic);
-    } else if (data?.sectionId) {
-      scrollToSection(data.sectionId);
-    }
 
     if (data?.showInquiryForm) {
       openInquiryForm(fallbackMessage || '');
@@ -840,49 +850,48 @@
 
   function localConciergeAnswer(question) {
     const settings = getSettings();
-    const amenities = getVisibleAmenities();
     const q = String(question || '').toLowerCase();
 
-    if (/location|where|address|map|find|locate|exact location/.test(q)) {
-      return 'You can find the exact location in Guide → Exact location. The map links are there too.';
+    if (/(location|where|address|map|find|locate|exact location)/.test(q)) {
+      return `We are at ${settings.building}. Nearby places include SM East Ortigas, Bridgetowne, SM Megamall, Robinsons Galleria, Medical City, Tiendesitas, and Eastwood.`;
     }
-    if (/parking/.test(q)) {
-      return 'Parking details are in Guide → Parking. You will see the availability notes and the car and motorcycle rates there.';
+    if (/parking/.test(q)) {
+      return `Parking is by request. Rates are Car: ${settings.parkingRates.car} and Motorcycle: ${settings.parkingRates.motorcycle}. Please advise early if you need parking.`;
     }
-    if (/price|rate|cost|pricing/.test(q)) {
-      return 'Pricing is listed in Guide → Pricing.';
+    if (/(price|rate|cost|pricing)/.test(q)) {
+      return `Here’s the pricing guide: ${settings.pricing.slice(0, 3).join(' · ')}${settings.pricing.length > 3 ? ' · ...' : ''}`;
     }
-    if (/rule|smok|noise|visitor|pool|house/.test(q)) {
-      return 'House rules are in Guide → House rules.';
+    if (/(rule|smok|noise|visitor|pool|house)/.test(q)) {
+      return `House rules include: ${settings.houseRules.join(' · ')}.`;
     }
-    if (/check.?in|self check|arrival/.test(q)) {
-      return 'Self check-in is in Guide → Self check-in.';
+    if (/check.?in|self check|arrival/.test(q)) {
+      return `Self check-in starts at ${settings.checkIn}. The steps are: ${settings.selfCheckIn.join(' ')}`;
     }
-    if (/checkout|check.?out|leave|departure/.test(q)) {
-      return 'Checkout steps are in Guide → Checkout reminder.';
+    if (/checkout|check.?out|leave|departure/.test(q)) {
+      return `Checkout is at ${settings.checkOut}. Reminder: ${settings.checkout.join(' ')}`;
     }
-    if (/amenit|include|what is inside|included/.test(q)) {
-      return 'You can find the full list in the Amenities section.';
+    if (/(amenit|include|what is inside|included)/.test(q)) {
+      return `The unit includes amenities like fast Wi‑Fi, smart TV, air conditioning, kitchenware, washing machine, karaoke, projector, dining set, and board games.`;
     }
-    if (/gallery|photo|video|tour|walkthrough/.test(q)) {
-      return 'The photos and video tours are in the Gallery and Video tours sections.';
+    if (/(gallery|photo|video|tour|walkthrough)/.test(q)) {
+      return `The gallery and video tours show the unit’s living room, kitchen, bedroom, bathroom, and walkthrough clips.`;
     }
-    if (/review|comment|testimonial/.test(q)) {
-      return 'Guest reviews are in the Reviews section.';
+    if (/(review|comment|testimonial)/.test(q)) {
+      return `Guest reviews are positive, with guests highlighting the clean space, polished layout, and easy check-in.`;
     }
-    if (/booking requirement|deposit|reservation fee|id|verify/.test(q)) {
-      return 'Booking requirements are in Guide → Booking requirements.';
+    if (/(booking requirement|deposit|reservation fee|id|verify)/.test(q)) {
+      return `Booking requirements include a valid ID for all guests, one email address and contact number, and the PHP 1,000 security deposit / reservation fee.`;
     }
-    if (/book|reserve|availability/.test(q)) {
-      return 'You can use the booking card at the top of the page to send an inquiry.';
+    if (/(book|reserve|availability)/.test(q)) {
+      return `You can check availability using the booking form above, then send the request to the host.`;
     }
-    if (/children|kids|birthday|decorate|pets|pet|late checkout|early check-in|midnight/.test(q)) {
-      return 'I could not find that detail on the site yet. You can send a message to the host using the inquiry form below.';
+    if (/(children|kids|birthday|decorate|pets|pet|late checkout|early check-in|midnight)/.test(q)) {
+      return `I could not find that detail on the site yet. Please send a message to the host using the inquiry form below.`;
     }
-    if (/contact|host|email|message/.test(q)) {
-      return 'Use the inquiry form below to send your message to the host.';
+    if (/(contact|host|email|message)/.test(q)) {
+      return `Use the inquiry form below to send your message to the host.`;
     }
-    return 'I can help with the site sections or, if the detail is not listed, send an inquiry to the host.';
+    return `I can answer questions about the stay here. If I do not have the detail on the site, I can send an inquiry to the host.`;
   }
 
   async function sendChat() {

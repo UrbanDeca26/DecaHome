@@ -123,175 +123,110 @@ function inquiryReply(text, suggestions = []) {
   });
 }
 
+
 function localAnswer(property, amenities, message) {
   const q = String(message || '').toLowerCase();
 
-  if (/location|where|address|map|find|locate|exact location/.test(q)) {
-    return navReply(
-      property,
-      message,
-      'guide',
-      'Exact location',
-      `You can find the exact location in Guide → Exact location. The map links are there too.`,
-      [
-        { label: 'Parking', query: 'What are the parking details?' },
-        { label: 'Pricing', query: 'What is the pricing?' },
-        { label: 'Amenities', query: 'What amenities are included?' },
-      ]
-    );
+  if (/\b(location|where|address|map|find|locate|exact location)\b/.test(q)) {
+    return reply({
+      reply: `We are at ${property.building}. Nearby places include SM East Ortigas, Bridgetowne, SM Megamall, Robinsons Galleria, Medical City, Tiendesitas, and Eastwood.`,
+      intent: 'property_info',
+      risk: 'low',
+      showInquiryForm: false,
+    });
   }
 
-  if (/parking/.test(q)) {
-    return navReply(
-      property,
-      message,
-      'guide',
-      'Parking',
-      `Parking details are in Guide → Parking. You will see the availability notes and the car and motorcycle rates there.`,
-      [
-        { label: 'House Rules', query: 'What are the house rules?' },
-        { label: 'Booking requirements', query: 'What are the booking requirements?' },
-        { label: 'Check-in', query: 'How does self check-in work?' },
-      ]
-    );
+  if (/\bparking\b/.test(q)) {
+    return reply({
+      reply: `Parking is by request. Rates are Car: ${property.parkingRates.car} and Motorcycle: ${property.parkingRates.motorcycle}. Please advise early if you need parking.`,
+      intent: 'property_info',
+      risk: 'low',
+      showInquiryForm: false,
+    });
   }
 
-  if (/price|rate|cost|pricing/.test(q)) {
-    return navReply(
-      property,
-      message,
-      'guide',
-      'Pricing',
-      `Pricing is listed in Guide → Pricing.`,
-      [
-        { label: 'Location', query: 'Where is the exact location?' },
-        { label: 'Parking', query: 'What are the parking details?' },
-        { label: 'Booking', query: 'How do I book?' },
-      ]
-    );
+  if (/\b(price|rate|cost|pricing)\b/.test(q)) {
+    return reply({
+      reply: `Here’s the pricing guide: ${property.pricing.slice(0, 3).join(' · ')}${property.pricing.length > 3 ? ' · ...' : ''}`,
+      intent: 'property_info',
+      risk: 'low',
+      showInquiryForm: false,
+    });
   }
 
-  if (/rule|smok|noise|visitor|pool|house/.test(q)) {
-    return navReply(
-      property,
-      message,
-      'guide',
-      'House rules',
-      `House rules are in Guide → House rules.`,
-      [
-        { label: 'Check-in', query: 'How does self check-in work?' },
-        { label: 'Pricing', query: 'What is the pricing?' },
-        { label: 'Amenities', query: 'What amenities are included?' },
-      ]
-    );
+  if (/\b(rule|smok|noise|visitor|pool|house)\b/.test(q)) {
+    return reply({
+      reply: `House rules include: ${property.houseRules.join(' · ')}.`,
+      intent: 'property_info',
+      risk: 'low',
+      showInquiryForm: false,
+    });
   }
 
-  if (/check.?in|self check|arrival/.test(q)) {
-    return navReply(
-      property,
-      message,
-      'guide',
-      'Self check-in',
-      `Self check-in is in Guide → Self check-in.`,
-      [
-        { label: 'Checkout', query: 'What is the checkout reminder?' },
-        { label: 'Location', query: 'Where is the exact location?' },
-        { label: 'Parking', query: 'What are the parking details?' },
-      ]
-    );
+  if (/\bcheck.?in|self check|arrival\b/.test(q)) {
+    return reply({
+      reply: `Self check-in starts at ${property.checkIn}. The steps are: ${property.selfCheckIn.join(' ')}`,
+      intent: 'property_info',
+      risk: 'low',
+      showInquiryForm: false,
+    });
   }
 
-  if (/checkout|check.?out|leave|departure/.test(q)) {
-    return navReply(
-      property,
-      message,
-      'guide',
-      'Checkout reminder',
-      `Checkout steps are in Guide → Checkout reminder.`,
-      [
-        { label: 'House Rules', query: 'What are the house rules?' },
-        { label: 'Check-in', query: 'How does self check-in work?' },
-        { label: 'Reviews', query: 'Tell me about the reviews.' },
-      ]
-    );
+  if (/\bcheckout|check.?out|leave|departure\b/.test(q)) {
+    return reply({
+      reply: `Checkout is at ${property.checkOut}. Reminder: ${property.checkout.join(' ')}`,
+      intent: 'property_info',
+      risk: 'low',
+      showInquiryForm: false,
+    });
   }
 
-  if (/amenit|include|what is inside|included/.test(q)) {
-    return navReply(
-      property,
-      message,
-      'amenities',
-      null,
-      `You can find the full list in the Amenities section.`,
-      [
-        { label: 'Gallery', query: 'Show me the gallery.' },
-        { label: 'Reviews', query: 'Tell me about the reviews.' },
-        { label: 'Booking', query: 'How do I book?' },
-      ]
-    );
+  if (/\b(amenit|include|what is inside|included)\b/.test(q)) {
+    return reply({
+      reply: `The unit includes amenities like fast Wi‑Fi, smart TV, air conditioning, kitchenware, washing machine, karaoke, projector, dining set, and board games.`,
+      intent: 'property_info',
+      risk: 'low',
+      showInquiryForm: false,
+    });
   }
 
-  if (/gallery|photo|video|tour|walkthrough/.test(q)) {
-    return navReply(
-      property,
-      message,
-      'gallery',
-      null,
-      `The photos and video tours are in the Gallery and Video tours sections.`,
-      [
-        { label: 'Amenities', query: 'What amenities are included?' },
-        { label: 'Reviews', query: 'Tell me about the reviews.' },
-        { label: 'Location', query: 'Where is the exact location?' },
-      ]
-    );
+  if (/\b(gallery|photo|video|tour|walkthrough)\b/.test(q)) {
+    return reply({
+      reply: `The gallery and video tours show the unit’s living room, kitchen, bedroom, bathroom, and walkthrough clips.`,
+      intent: 'property_info',
+      risk: 'low',
+      showInquiryForm: false,
+    });
   }
 
-  if (/review|comment|testimonial/.test(q)) {
-    return navReply(
-      property,
-      message,
-      'reviews',
-      null,
-      `Guest reviews are in the Reviews section.`,
-      [
-        { label: 'Amenities', query: 'What amenities are included?' },
-        { label: 'Parking', query: 'What are the parking details?' },
-        { label: 'Booking', query: 'How do I book?' },
-      ]
-    );
+  if (/\b(review|comment|testimonial)\b/.test(q)) {
+    return reply({
+      reply: `Guest reviews are positive, with guests highlighting the clean space, polished layout, and easy check-in.`,
+      intent: 'property_info',
+      risk: 'low',
+      showInquiryForm: false,
+    });
   }
 
-  if (/booking requirement|deposit|reservation fee|id|verify/.test(q)) {
-    return navReply(
-      property,
-      message,
-      'guide',
-      'Booking requirements',
-      `Booking requirements are in Guide → Booking requirements.`,
-      [
-        { label: 'Pricing', query: 'What is the pricing?' },
-        { label: 'House Rules', query: 'What are the house rules?' },
-        { label: 'Check-in', query: 'How does self check-in work?' },
-      ]
-    );
+  if (/\b(booking requirement|deposit|reservation fee|id|verify)\b/.test(q)) {
+    return reply({
+      reply: `Booking requirements include a valid ID for all guests, one email address and contact number, and the PHP 1,000 security deposit / reservation fee.`,
+      intent: 'property_info',
+      risk: 'low',
+      showInquiryForm: false,
+    });
   }
 
-  if (/book|reserve|availability/.test(q)) {
-    return navReply(
-      property,
-      message,
-      'booking',
-      null,
-      `You can use the booking card at the top of the page to send an inquiry.`,
-      [
-        { label: 'Location', query: 'Where is the exact location?' },
-        { label: 'Pricing', query: 'What is the pricing?' },
-        { label: 'Contact Host', query: 'I need to ask the host something not shown on the site.' },
-      ]
-    );
+  if (/\b(book|reserve|availability)\b/.test(q)) {
+    return reply({
+      reply: `You can check availability using the booking form above, then send the request to the host.`,
+      intent: 'property_info',
+      risk: 'low',
+      showInquiryForm: false,
+    });
   }
 
-  if (/children|kids|birthday|decorate|pets|pet|late checkout|early check-in|midnight/.test(q)) {
+  if (/\b(children|kids|birthday|decorate|pets|pet|late checkout|early check-in|midnight)\b/.test(q)) {
     return inquiryReply(
       `I could not find that detail on the site yet. Please send a message to the host using the inquiry form below.`,
       [
@@ -302,7 +237,7 @@ function localAnswer(property, amenities, message) {
     );
   }
 
-  if (/contact|host|email|message/.test(q)) {
+  if (/\b(contact|host|email|message)\b/.test(q)) {
     return inquiryReply(
       `Use the inquiry form below to send your message to the host.`,
       [
@@ -314,7 +249,7 @@ function localAnswer(property, amenities, message) {
   }
 
   return reply({
-    reply: `I can help with the site sections or, if the detail is not listed, send an inquiry to the host.`,
+    reply: `I can answer questions about the stay here. If I do not have the detail on the site, I can send an inquiry to the host.`,
     intent: 'help',
     showInquiryForm: false,
     suggestions: [
@@ -326,6 +261,7 @@ function localAnswer(property, amenities, message) {
     ],
   });
 }
+
 
 module.exports = async function handler(req, res) {
   try {
