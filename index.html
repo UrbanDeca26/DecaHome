@@ -1,10 +1,11 @@
+
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Luxury Stay | Condo Booking in Metro Manila</title>
-  <meta name="description" content="Luxury condo booking website with a premium hero, gallery, videos, booking inquiry form, map, reviews, comments, and Groq AI concierge." />
+  <title>Luxury Stay | Comfort • Convenience • Home Away From Home</title>
+  <meta name="description" content="Premium condo booking site with a refined hero, glass amenities, exact location, house rules, pricing guide, reviews, and an editable owner dashboard." />
   <meta name="theme-color" content="#ff5a5f" />
   <link rel="stylesheet" href="./style.css" />
 </head>
@@ -13,22 +14,20 @@
   <div class="bg-orb orb-b"></div>
   <div class="bg-orb orb-c"></div>
 
-  <header class="topbar">
-    <a class="brand" href="#hero" aria-label="Luxury Stay home">
-      <span class="brand-mark">LS</span>
-      <span class="brand-copy">
-        <strong>Luxury Stay</strong>
-        <small>Guest-ready condo in Metro Manila</small>
-      </span>
-    </a>
+	  <header class="topbar">
+		<a class="brand" href="#hero" aria-label="Luxury Stay home">
+		  <span class="brand-mark">LS</span>
+		  <span class="brand-copy">
+			<strong>Luxury Stay</strong>
+			<small>Comfort • Convenience • Home Away From Home</small>
+		  </span>
+		</a>
 
     <nav class="navlinks" aria-label="Primary">
-      <a href="#experience">Experience</a>
       <a href="#gallery">Gallery</a>
-      <a href="#videos">Videos</a>
       <a href="#amenities">Amenities</a>
+      <a href="#guide">Guide</a>
       <a href="#reviews">Reviews</a>
-      <a href="#location">Location</a>
       <a href="#concierge">Ask</a>
     </nav>
 
@@ -40,51 +39,38 @@
   <main>
     <section class="hero" id="hero">
       <video class="hero-video" autoplay muted loop playsinline poster="./assets/9.jpg">
-        <source src="./assets/tour-01.mp4" type="video/mp4" />
+        <source src="./assets/tour-02.mp4" type="video/mp4" />
       </video>
       <div class="hero-overlay"></div>
 
       <div class="hero-shell">
         <div class="hero-copy reveal">
-          <div class="eyebrow">★★★★★ 4.98 Guest favorite • Entire private condo • Quezon City</div>
-          <h1>Luxury Stay in Quezon City.</h1>
+          <div class="eyebrow">Urban Deca Homes Ortigas Extension • Pasig City • Up to 9 guests</div>
+          <h2>A calm, polished stay for families, friends, and city breaks.</h2>
           <p>
-            A calm, modern condo for staycations, work trips, and family weekends — with fast Wi‑Fi, self check-in, and a fully equipped home feel.
+            A guest-ready condo with hotel-style essentials, self check-in, fast Wi‑Fi, and a location that keeps the whole group close to Ortigas.
           </p>
 
           <div class="hero-values" aria-label="Core values">
-            <div class="value-card"><strong>Entire private condo</strong><span>Enjoy the space to yourself.</span></div>
-            <div class="value-card"><strong>300 Mbps Wi‑Fi</strong><span>Built for work and streaming.</span></div>
-            <div class="value-card"><strong>Sleeps up to 6</strong><span>Comfortable for families or groups.</span></div>
-            <div class="value-card"><strong>Self check-in</strong><span>Easy, private, and flexible arrival.</span></div>
-            <div class="value-card"><strong>Full kitchen</strong><span>Cook, dine, and settle in.</span></div>
-            <div class="value-card"><strong>Washer included</strong><span>Ready for short or longer stays.</span></div>
+            <div class="value-card"><strong>Up to 9 guests</strong><span>Flexible for family or barkada stays.</span></div>
+            <div class="value-card"><strong>Self check-in</strong><span>Tap-card entry with simple arrival steps.</span></div>
+            <div class="value-card"><strong>Fast Wi‑Fi</strong><span>100 Mbps connection for streaming and work.</span></div>
+            <div class="value-card"><strong>Ortigas location</strong><span>Close to malls, food, and essentials.</span></div>
           </div>
 
           <div class="mini-stats">
-            <article><strong>12</strong><span>Curated photos</span></article>
-            <article><strong>2</strong><span>Video tours</span></article>
-            <article><strong>6</strong><span>Guest capacity</span></article>
-            <article><strong>24/7</strong><span>Self check-in ready</span></article>
+            <article><strong>1:00 PM</strong><span>Check-in onward</span></article>
+            <article><strong>11:00 AM</strong><span>Checkout next day</span></article>
+            <article><strong>₱1,000</strong><span>Refundable deposit</span></article>
           </div>
         </div>
 
         <aside class="booking-card reveal" id="booking">
-          <div class="booking-head">
-            <div>
-              <div class="price">PHP 4,200 <small>/ night</small></div>
-              <div class="subprice">Rated 4.98 by guests</div>
-            </div>
-            <div class="rating-pill">Guest favorite</div>
-          </div>
-
-          <div class="host-line">Hosted by Richmond</div>
-
           <div class="booking-grid">
-            <label>Check-in
+            <label>Check-in date
               <input id="checkin" type="date" />
             </label>
-            <label>Check-out
+            <label>Check-out date
               <input id="checkout" type="date" />
             </label>
             <label>Guests
@@ -95,6 +81,9 @@
                 <option>4 guests</option>
                 <option>5 guests</option>
                 <option>6 guests</option>
+                <option>7 guests</option>
+                <option>8 guests</option>
+                <option>9 guests</option>
               </select>
             </label>
             <label>Your name
@@ -106,58 +95,13 @@
             <label>Phone number
               <input id="guestPhone" type="tel" placeholder="Optional" />
             </label>
-            <label class="span-2">Message for the host
-              <textarea id="guestNote" rows="3" placeholder="Tell us anything we should know..."></textarea>
+            <label class="span-2">Special request
+              <textarea id="guestNote" rows="3" placeholder="Add any details for the host..."></textarea>
             </label>
           </div>
-
-          <div class="cost-lines">
-            <div><span id="nights">0 nights</span><strong id="subtotal">PHP 0</strong></div>
-            <div><span>Cleaning fee</span><strong>PHP 700</strong></div>
-            <div><span>Service fee</span><strong>PHP 300</strong></div>
-            <div class="total"><span>Estimated total</span><strong id="total">PHP 0</strong></div>
-          </div>
-
-          <button class="btn btn-primary full" id="reserveBtn">Send booking inquiry</button>
-          <p class="booking-note">No charge yet. Your request will be emailed to the host for confirmation.</p>
+          <button class="btn btn-primary full" id="reserveBtn" type="button">Check availability</button>
         </aside>
-      </div>
-    </section>
 
-    <section class="trustbar reveal" aria-label="Trust badges">
-      <div class="trust-item"><strong>4.98/5</strong><span>Guest rating</span></div>
-      <div class="trust-item"><strong>Entire place</strong><span>Private condo</span></div>
-      <div class="trust-item"><strong>Fast Wi-Fi</strong><span>Work-friendly</span></div>
-      <div class="trust-item"><strong>Self check-in</strong><span>Easy arrival</span></div>
-      <div class="trust-item"><strong>6 guests</strong><span>Comfortable capacity</span></div>
-    </section>
-
-    <section class="section reveal" id="experience">
-      <div class="section-head">
-        <span>Why guests book this stay</span>
-        <h2>Core values that make the stay easy to choose.</h2>
-      </div>
-      <div class="feature-grid">
-        <article class="feature-card">
-          <div class="feature-icon">🏡</div>
-          <h3>Feels calm and clean</h3>
-          <p>Warm lighting, soft neutrals, and a layout that helps guests settle in quickly.</p>
-        </article>
-        <article class="feature-card">
-          <div class="feature-icon">📶</div>
-          <h3>Built for work and play</h3>
-          <p>Fast Wi‑Fi, Smart TV, and a dedicated workspace for remote work or streaming.</p>
-        </article>
-        <article class="feature-card">
-          <div class="feature-icon">🍳</div>
-          <h3>Complete daily essentials</h3>
-          <p>Kitchen tools, refrigerator, microwave, washer, and dining space already in place.</p>
-        </article>
-        <article class="feature-card">
-          <div class="feature-icon">🔑</div>
-          <h3>Simple check-in</h3>
-          <p>Self check-in keeps arrival smooth, private, and easy to manage.</p>
-        </article>
       </div>
     </section>
 
@@ -165,10 +109,10 @@
       <div class="section-head row">
         <div>
           <span>Gallery</span>
-          <h2>Explore the actual space before you book.</h2>
-          <p>One featured collage, then the full gallery is one tap away.</p>
+          <h2>Take a closer look at your home away from home.</h2>
+          <p>Browse photos and video tours to explore every corner of the unit before your arrival.</p>
         </div>
-        <button class="text-btn" id="openAllPhotos">Open all 12 photos</button>
+        <button class="text-btn" id="openAllPhotos">View gallery</button>
       </div>
       <div class="gallery-spotlight" id="galleryGrid"></div>
     </section>
@@ -176,61 +120,46 @@
     <section class="section reveal" id="videos">
       <div class="section-head">
         <span>Video tours</span>
-        <h2>Take a virtual tour before you book.</h2>
+        <h2>Short walkthroughs for a quick first look.</h2>
       </div>
-      <div class="video-grid" id="videoGrid">
-        <figure class="video-card">
-          <video controls playsinline preload="metadata" poster="./assets/9.jpg">
-            <source src="./assets/tour-01.mp4" type="video/mp4" />
-            Your browser does not support this video.
-          </video>
-          <figcaption>Primary tour</figcaption>
-        </figure>
-        <figure class="video-card">
-          <video controls playsinline preload="metadata" poster="./assets/5.jpg">
-            <source src="./assets/tour-02.mp4" type="video/mp4" />
-            Your browser does not support this video.
-          </video>
-          <figcaption>Second tour</figcaption>
-        </figure>
-      </div>
+      <div class="video-grid" id="videoGrid"></div>
     </section>
 
     <section class="section reveal" id="amenities">
       <div class="section-head">
         <span>Included in your stay</span>
-        <h2>Everything included, shown clearly.</h2>
+        <h2>Everything you need for a comfortable and enjoyable stay.</h2>
+        <p>Enjoy all the amenities included with your stay.</p>
       </div>
-      <div class="amenity-grid">
-        <article>Fast Wi‑Fi</article>
-        <article>Smart TV</article>
-        <article>Self check‑in</article>
-        <article>Air conditioning</article>
-        <article>Full kitchen</article>
-        <article>Refrigerator</article>
-        <article>Microwave</article>
-        <article>Washer</article>
-        <article>Rain shower</article>
-        <article>Dining area</article>
-        <article>Workspace</article>
-        <article>24/7 security</article>
+      <div class="amenity-preview" id="amenityPreview"></div>
+      <div class="section-actions">
+        <button class="btn btn-primary" id="openAmenities">View amenities</button>
       </div>
+    </section>
+
+    <section class="section reveal" id="guide">
+      <div class="section-head">
+        <span>Stay guide</span>
+        <h2>Everything you need to know before and during your stay.</h2>
+        <p>Find everything you need to make your stay smooth and enjoyable.</p>
+      </div>
+      <div class="guide-grid" id="guideGrid"></div>
     </section>
 
     <section class="section reveal" id="reviews">
       <div class="section-head">
         <span>Guest reviews</span>
-        <h2>What visitors notice first.</h2>
+        <h2>See what previous guests loved about their stay.</h2>
       </div>
       <div class="review-grid">
         <article class="review-card">
           <div class="stars">★★★★★</div>
-          <p>The unit feels exactly like the photos. Very clean, organized, and easy to enjoy.</p>
+          <p>The place looks exactly like the photos. Very clean, organized, and easy to enjoy.</p>
           <strong>Guest favorite</strong>
         </article>
         <article class="review-card">
           <div class="stars">★★★★★</div>
-          <p>The lighting, layout, and finishes make the stay feel polished and comfortable.</p>
+          <p>The layout, lighting, and finishes make the stay feel polished and comfortable.</p>
           <strong>Top rated stay</strong>
         </article>
         <article class="review-card">
@@ -242,7 +171,7 @@
 
       <div class="comment-shell">
         <div>
-          <div class="section-head" style="margin-top: 14px;">
+          <div class="section-head compact">
             <span>Guest comments</span>
             <h2>Leave a review</h2>
           </div>
@@ -281,107 +210,121 @@
       </div>
     </section>
 
-    <section class="section reveal" id="location">
-      <div class="section-head">
-        <span>Location</span>
-        <h2>Open directions in Google Maps or Waze.</h2>
-      </div>
-      <div class="location-card">
-        <div class="location-copy">
-          <h3>Quezon City, Metro Manila</h3>
-          <p>
-            Use the embedded map below, or open directions directly in Google Maps or Waze for the fastest route.
-          </p>
-          <div class="map-actions">
-            <a class="btn btn-primary" id="googleMapsBtn" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
-            <a class="btn btn-secondary" id="wazeBtn" target="_blank" rel="noopener noreferrer">Open in Waze</a>
-          </div>
-          <ul>
-            <li>Nearby restaurants and cafés</li>
-            <li>Easy ride-hailing access</li>
-            <li>Convenience stores and essentials</li>
-            <li>Good for business and staycations</li>
-          </ul>
-        </div>
-        <div class="map-frame-wrap">
-          <iframe id="mapFrame" title="Map" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-        </div>
-      </div>
-    </section>
-
-    <section class="section reveal" id="faq">
-      <div class="section-head">
-        <span>Frequently asked questions</span>
-        <h2>Fast answers before booking.</h2>
-      </div>
-      <div class="faq-grid">
-        <details open>
-          <summary>How many guests can stay?</summary>
-          <p>The listing is designed for up to 6 guests.</p>
-        </details>
-        <details>
-          <summary>Is check-in easy?</summary>
-          <p>Yes. The booking page highlights self check-in for a smoother arrival.</p>
-        </details>
-        <details>
-          <summary>What amenities are included?</summary>
-          <p>Fast Wi‑Fi, Smart TV, washer, full kitchen, dining area, workspace, and bathroom essentials.</p>
-        </details>
-      </div>
-    </section>
-
     <section class="section reveal concierge" id="concierge">
-      <div class="section-head row">
-        <div>
-          <span>Meet Luna</span>
-          <h2>Ask questions and get grounded answers.</h2>
-        </div>
+      <div class="section-head compact">
+        <span>Meet Luna</span>
+        <h2>Your virtual concierge.</h2>
+        <p>Ask Luna about the stay, and she’ll answer directly here. If something is not listed, she’ll help you send a message to the host.</p>
       </div>
-      <div class="concierge-box">
+      <div class="concierge-box compact">
         <div class="chat-log" id="chatLog">
-          <div class="chat-msg bot">Ask about the unit, amenities, check-in, guests, or nearby places.</div>
+          <div class="chat-msg bot">Hi, I’m Luna, your Luxury Stay concierge. Ask me anything about the stay, and I’ll answer here. If I can’t find it, I’ll help you send a message to the host.</div>
         </div>
+
         <div class="chat-input-row">
-          <input id="chatInput" type="text" placeholder="Ask about parking, Wi‑Fi, guests, or check-in..." />
-          <button class="btn btn-primary" id="sendChat">Send</button>
+          <input id="chatInput" type="text" placeholder="Ask Luna about the stay, bookings, or special requests..." />
+          <button class="btn btn-primary" id="sendChat" type="button">Send</button>
+        </div>
+
+        <div class="chat-inquiry-panel hidden" id="chatInquiryPanel">
+          <div class="chat-inquiry-head">
+            <div>
+              <strong>Send inquiry to host</strong>
+              <p>When Luna cannot answer here, send your question by email.</p>
+            </div>
+            <button type="button" class="text-btn" id="closeInquiryPanel">Close</button>
+          </div>
+
+          <form id="chatInquiryForm" class="chat-inquiry-form">
+            <div class="chat-inquiry-grid">
+              <label>
+                Name
+                <input id="chatInquiryName" type="text" placeholder="Your name" />
+              </label>
+              <label>
+                Email
+                <input id="chatInquiryEmail" type="email" placeholder="Your email" />
+              </label>
+              <label>
+                Phone
+                <input id="chatInquiryPhone" type="tel" placeholder="Optional" />
+              </label>
+              <label class="span-2">
+                Message
+                <textarea id="chatInquiryMessage" rows="4" placeholder="Write your question for the host..."></textarea>
+              </label>
+            </div>
+
+            <div class="chat-inquiry-actions">
+              <button class="btn btn-primary" id="chatInquirySend" type="submit">Send inquiry</button>
+            </div>
+            <p class="chat-inquiry-note">The host will receive this question by email.</p>
+          </form>
         </div>
       </div>
     </section>
   </main>
 
-    <section class="section owner-panel hidden" id="ownerPanel" aria-hidden="true">
-      <div class="section-head">
-        <span>Owner dashboard</span>
-        <h2>Manage reviews and media</h2>
-        <p>Edit guest comments, upload photos or videos, and keep the listing up to date without touching the code.</p>
-      </div>
-      <div class="owner-grid">
-        <article class="owner-card">
-          <div class="owner-card-head">
-            <h3>Review manager</h3>
-            <p>Add, edit, feature, hide, or delete guest comments.</p>
-          </div>
-          <div id="ownerReviewList"></div>
-        </article>
+  <section class="section owner-panel hidden" id="ownerPanel" aria-hidden="true">
+    <div class="section-head">
+      <span>Owner dashboard</span>
+      <h2>Manage reviews, media, and amenities</h2>
+      <p>Update the listing content without touching the code.</p>
+    </div>
+    <div class="owner-grid">
+      <article class="owner-card">
+        <div class="owner-card-head">
+          <h3>Property settings</h3>
+          <p>Edit location, prices, capacity, and policies from one form.</p>
+        </div>
+        <div id="ownerSettingsList"></div>
+      </article>
 
-        <article class="owner-card">
-          <div class="owner-card-head">
-            <h3>Media manager</h3>
-            <p>Upload or remove photos and videos from the gallery.</p>
-          </div>
-          <div id="ownerMediaList"></div>
-        </article>
-      </div>
+      <article class="owner-card">
+        <div class="owner-card-head">
+          <h3>Amenity manager</h3>
+          <p>Add, edit, hide, or delete amenity cards.</p>
+        </div>
+        <div id="ownerAmenityList"></div>
+      </article>
 
-      <div class="owner-actions-bar">
-        <button class="btn btn-ghost" id="ownerLogoutBtn" type="button">Log out</button>
-      </div>
-    </section>
+      <article class="owner-card">
+        <div class="owner-card-head">
+          <h3>Review manager</h3>
+          <p>Add, edit, feature, hide, or delete guest comments.</p>
+        </div>
+        <div id="ownerReviewList"></div>
+      </article>
+
+      <article class="owner-card">
+        <div class="owner-card-head">
+          <h3>Media manager</h3>
+          <p>Upload or remove photos and videos from the gallery.</p>
+        </div>
+        <div id="ownerMediaList"></div>
+      </article>
+    </div>
+
+    <div class="owner-actions-bar">
+      <button class="btn btn-ghost" id="ownerLogoutBtn" type="button">Log out</button>
+    </div>
+  </section>
+
+
+  <div class="site-modal" id="amenitiesModal" aria-hidden="true">
+    <div class="site-modal-card" role="dialog" aria-modal="true" aria-labelledby="amenitiesModalTitle">
+      <button class="site-modal-close" id="closeAmenities" type="button" aria-label="Close amenities">×</button>
+      <div class="owner-modal-kicker">Amenities</div>
+      <h3 id="amenitiesModalTitle">Full amenity list</h3>
+      <p>Enjoy all the amenities included with your stay.</p>
+      <div class="amenity-modal-grid" id="amenitiesModalList"></div>
+    </div>
+  </div>
 
   <footer class="footer">
     <div>
       <strong>Luxury Stay</strong>
-      <p>Guest-ready booking site for a modern condo stay.</p>
+      <p>Comfort • Convenience • Home Away From Home</p>
     </div>
     <div class="footer-actions"><a href="#hero">Back to top</a><span class="footer-copyright" id="footerCopyright">© 2026 Luxury Stay</span></div>
   </footer>
