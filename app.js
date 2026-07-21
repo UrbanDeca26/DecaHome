@@ -354,7 +354,7 @@
     return [
       {
         id: 'exact-location',
-        title: 'Exact location',
+        title: 'Location',
         body: `
           <div class="guide-panel">
             <p class="guide-location">${escapeHtml(s.area)}</p>
@@ -493,7 +493,7 @@
         <label>Hero title <input id="settingsHeroTitle" type="text" value="${escapeHtml(s.heroTitle || '')}" /></label>
         <label>Hero subtitle <textarea id="settingsHeroSubtitle">${escapeHtml(s.heroSubtitle || '')}</textarea></label>
         <div class="owner-row">
-          <label>Exact location <input id="settingsArea" type="text" value="${escapeHtml(s.area)}" /></label>
+          <label>Location <input id="settingsArea" type="text" value="${escapeHtml(s.area)}" /></label>
           <label>Building / unit detail <input id="settingsBuilding" type="text" value="${escapeHtml(s.building)}" /></label>
         </div>
         <div class="owner-row">
