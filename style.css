@@ -2614,3 +2614,20 @@ section.concierge {
     max-height: calc(100vh - var(--topbar-offset, 112px) - 72px) !important;
   }
 }
+
+
+/* V2: extra laptop clearance for guide and modal overlays */
+@media (min-width: 821px) {
+  .guide-modal,
+  .site-modal,
+  .owner-modal {
+    top: calc(var(--topbar-offset, 112px) + 56px) !important;
+    padding: 0 24px 24px !important;
+  }
+
+  .guide-modal-card,
+  .site-modal-card,
+  .owner-modal-card {
+    max-height: calc(100vh - var(--topbar-offset, 112px) - 96px) !important;
+  }
+}
