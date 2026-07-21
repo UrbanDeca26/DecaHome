@@ -1,5 +1,6 @@
 
 :root {
+  --topbar-offset: 112px;
   --bg: #f5efe7;
   --card: rgba(255, 255, 255, 0.76);
   --card-strong: #fff;
@@ -509,9 +510,10 @@ main { position: relative; z-index: 1; }
   position: fixed;
   inset: 0;
   display: none;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 18px;
+  padding: calc(var(--topbar-offset, 112px) + 16px) 18px 18px;
+  box-sizing: border-box;
   background: rgba(12,10,8,.58);
   backdrop-filter: blur(8px);
   z-index: 120;
@@ -520,6 +522,8 @@ main { position: relative; z-index: 1; }
 .owner-modal-card {
   position: relative;
   width: min(92vw, 420px);
+  max-height: calc(100vh - var(--topbar-offset, 112px) - 40px);
+  overflow: auto;
   padding: 24px;
   border-radius: 28px;
   background: rgba(255,255,255,.95);
@@ -745,13 +749,28 @@ main { position: relative; z-index: 1; }
 .chat-input-row input { flex: 1; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: #fff; }
 
 .site-modal {
-  position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
-  padding: 18px; background: rgba(12,10,8,.55); backdrop-filter: blur(8px); z-index: 115;
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: calc(var(--topbar-offset, 112px) + 16px) 18px 18px;
+  box-sizing: border-box;
+  background: rgba(12,10,8,.52);
+  backdrop-filter: blur(8px);
+  z-index: 115;
 }
 .site-modal.open { display: flex; }
 .site-modal-card {
-  position: relative; width: min(94vw, 960px);
-  padding: 22px; border-radius: 28px; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.9); box-shadow: 0 24px 80px rgba(0,0,0,.22);
+  position: relative;
+  width: min(94vw, 960px);
+  max-height: calc(100vh - var(--topbar-offset, 112px) - 40px);
+  overflow: auto;
+  padding: 22px;
+  border-radius: 28px;
+  background: rgba(255,255,255,.96);
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 24px 80px rgba(0,0,0,.22);
 }
 .site-modal-card h3 { margin: 12px 0 8px; font-size: 1.45rem; letter-spacing: -0.03em; }
 .site-modal-card p { margin: 0; color: var(--muted); line-height: 1.65; }
@@ -1271,7 +1290,12 @@ section.concierge {
     margin-bottom: 44px !important;
   }
 
-  .guide-grid {
+  .guide-modal,
+  .site-modal,
+  .owner-modal {
+    padding-top: 96px !important;
+  }
+.guide-grid {
     grid-template-columns: 1fr !important;
   }
 
@@ -1297,7 +1321,12 @@ section.concierge {
     gap: 8px !important;
   }
 
-  .footer {
+  .guide-modal,
+  .site-modal,
+  .owner-modal {
+    padding-top: 88px !important;
+  }
+.footer {
     gap: 12px !important;
   }
 }
@@ -1380,10 +1409,11 @@ section.concierge {
   position: fixed !important;
   inset: 0 !important;
   display: none !important;
-  align-items: center !important;
+  align-items: flex-start !important;
   justify-content: center !important;
-  padding: 18px !important;
-  background: rgba(12,10,8,.58) !important;
+  padding: calc(var(--topbar-offset, 112px) + 16px) 18px 18px !important;
+  box-sizing: border-box !important;
+  background: rgba(12,10,8,.52) !important;
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
   z-index: 125 !important;
@@ -1396,7 +1426,7 @@ section.concierge {
 .guide-modal-card {
   position: relative !important;
   width: min(94vw, 820px) !important;
-  max-height: 88vh !important;
+  max-height: calc(100vh - 136px) !important;
   overflow: auto !important;
   padding: 24px !important;
   border-radius: 28px !important;
@@ -2502,10 +2532,16 @@ section.concierge {
     grid-template-columns: 1fr !important;
   }
 
+  .guide-modal,
+  .site-modal,
+  .owner-modal {
+    padding-top: calc(var(--topbar-offset, 112px) + 10px) !important;
+  }
+
   .guide-modal-card {
     width: min(94vw, 820px) !important;
-    max-height: 90vh !important;
-    padding: 22px !important;
+    max-height: calc(100vh - var(--topbar-offset, 112px) - 24px) !important;
+    padding: 20px !important;
   }
 
   .guide-modal-hero {
@@ -2523,6 +2559,12 @@ section.concierge {
 @media (max-width: 520px) {
   .guide-grid {
     gap: 8px !important;
+  }
+
+  .guide-modal,
+  .site-modal,
+  .owner-modal {
+    padding-top: calc(var(--topbar-offset, 112px) + 6px) !important;
   }
 
   .guide-card {
