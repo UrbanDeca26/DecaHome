@@ -1259,6 +1259,15 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     if (waze) waze.href = settings.wazeUrl || CONFIG.wazeUrl;
   }
 
+
+  function syncTopbarOffset() {
+    const topbar = document.querySelector('.topbar');
+    const root = document.documentElement;
+    if (!root) return;
+    const offset = topbar ? Math.max(96, Math.ceil(topbar.getBoundingClientRect().height + 12)) : 112;
+    root.style.setProperty('--topbar-offset', `${offset}px`);
+  }
+
   function setupRevealObserver() {
     const els = $$('.reveal');
     if (!('IntersectionObserver' in window)) {
@@ -1921,12 +1930,16 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     renderChatSuggestions(LUNA_DEFAULT_SUGGESTIONS);
     setBookingDateBounds();
     setupMap();
+    syncTopbarOffset();
     setupRevealObserver();
     bindPublicEvents();
     bindOwnerEvents();
     ensureOwnerSectionVisible();
     syncAdminStatus();
   }
+
+  window.addEventListener('resize', syncTopbarOffset);
+  window.addEventListener('orientationchange', syncTopbarOffset);
 
   document.addEventListener('DOMContentLoaded', renderInitialState);
 })();
