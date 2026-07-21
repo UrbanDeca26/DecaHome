@@ -2597,3 +2597,20 @@ section.concierge {
     gap: 12px !important;
   }
 }
+
+
+/* Desktop-only extra clearance so modals never sit under the fixed topbar */
+@media (min-width: 821px) {
+  .guide-modal,
+  .site-modal,
+  .owner-modal {
+    top: calc(var(--topbar-offset, 112px) + 40px) !important;
+    padding: 0 24px 24px !important;
+  }
+
+  .guide-modal-card,
+  .site-modal-card,
+  .owner-modal-card {
+    max-height: calc(100vh - var(--topbar-offset, 112px) - 72px) !important;
+  }
+}
