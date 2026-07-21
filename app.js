@@ -341,9 +341,8 @@
     if (openPhotosBtn) openPhotosBtn.textContent = 'View gallery';
   }
 
-  function renderGuide() {
-    const grid = $('#guideGrid');
-    if (!grid) return;
+
+  function getGuideSections() {
     const s = getSettings();
     const pricing = s.pricing.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
     const booking = s.bookingRequirements.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
@@ -352,68 +351,124 @@
     const rules = s.houseRules.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
     const nearby = s.nearby.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
 
-    const section = (title, body, open = false) => `
-      <details class="guide-card"${open ? ' open' : ''}>
-        <summary class="guide-summary">
-          <div class="guide-summary-copy">
-            <h3>${escapeHtml(title)}</h3>
+    return [
+      {
+        id: 'exact-location',
+        title: 'Exact location',
+        body: `
+          <div class="guide-panel">
+            <p class="guide-location">${escapeHtml(s.area)}</p>
+            <p class="guide-location">${escapeHtml(s.building)}</p>
+            <div class="map-actions compact">
+              <a class="btn btn-primary" href="${escapeHtml(s.googleMapsUrl || CONFIG.googleMapsUrl)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
+              <a class="btn btn-secondary" href="${escapeHtml(s.wazeUrl || CONFIG.wazeUrl)}" target="_blank" rel="noopener noreferrer">Open in Waze</a>
+            </div>
           </div>
-          <span class="guide-chevron" aria-hidden="true"><i class="fa-solid fa-circle-chevron-right"></i></span>
-        </summary>
-        <div class="guide-body">${body}</div>
-      </details>
-    `;
+          <div class="guide-panel">
+            <h4>Nearby places</h4>
+            <ul class="clean-list">${nearby}</ul>
+          </div>
+        `,
+      },
+      {
+        id: 'parking',
+        title: 'Parking',
+        body: `
+          <div class="guide-panel">
+            <ul class="clean-list">
+              <li>${escapeHtml(s.parking)}</li>
+              <li>Car: ${escapeHtml(s.parkingRates.car)}</li>
+              <li>Motorcycle: ${escapeHtml(s.parkingRates.motorcycle)}</li>
+            </ul>
+          </div>
+        `,
+      },
+      {
+        id: 'pricing',
+        title: 'Pricing',
+        body: `
+          <div class="guide-panel">
+            <ul class="clean-list">${pricing}</ul>
+          </div>
+        `,
+      },
+      {
+        id: 'booking-requirements',
+        title: 'Booking requirements',
+        body: `
+          <div class="guide-panel">
+            <ul class="clean-list">${booking}</ul>
+          </div>
+        `,
+      },
+      {
+        id: 'self-checkin',
+        title: 'Self check-in',
+        body: `
+          <div class="guide-panel">
+            <ol class="clean-list ordered">${selfCheckIn}</ol>
+          </div>
+        `,
+      },
+      {
+        id: 'checkout-reminder',
+        title: 'Checkout reminder',
+        body: `
+          <div class="guide-panel">
+            <ol class="clean-list ordered">${checkout}</ol>
+          </div>
+        `,
+      },
+      {
+        id: 'house-rules',
+        title: 'House rules',
+        body: `
+          <div class="guide-panel">
+            <ul class="clean-list">${rules}</ul>
+          </div>
+        `,
+      },
+    ];
+  }
 
-    grid.innerHTML = [
-      section('Exact location', `
-        <div class="guide-panel">
-          <p class="guide-location">${escapeHtml(s.area)}</p>
-          <p class="guide-location">${escapeHtml(s.building)}</p>
-          <div class="map-actions compact">
-            <a class="btn btn-primary" id="googleMapsBtn" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
-            <a class="btn btn-secondary" id="wazeBtn" target="_blank" rel="noopener noreferrer">Open in Waze</a>
-          </div>
+  function openGuideModal(sectionId) {
+    const modal = $('#guideModal');
+    const title = $('#guideModalTitle');
+    const body = $('#guideModalBody');
+    if (!modal || !title || !body) return;
+
+    const section = getGuideSections().find((item) => item.id === sectionId);
+    if (!section) return;
+
+    title.textContent = section.title;
+    body.innerHTML = section.body;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeGuideModal() {
+    const modal = $('#guideModal');
+    const body = $('#guideModalBody');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    if (body) body.innerHTML = '';
+  }
+
+  function renderGuide() {
+    const grid = $('#guideGrid');
+    if (!grid) return;
+
+    const sections = getGuideSections();
+
+    grid.innerHTML = sections.map((section) => `
+      <button class="guide-card" type="button" data-guide-id="${escapeHtml(section.id)}" aria-haspopup="dialog" aria-controls="guideModal">
+        <div class="guide-card-copy">
+          <h3>${escapeHtml(section.title)}</h3>
         </div>
-        <div class="guide-panel">
-          <h4>Nearby places</h4>
-          <ul class="clean-list">${nearby}</ul>
-        </div>
-      `, true),
-      section('Parking', `
-        <div class="guide-panel">
-          <ul class="clean-list">
-            <li>${escapeHtml(s.parking)}</li>
-            <li>Car: ${escapeHtml(s.parkingRates.car)}</li>
-            <li>Motorcycle: ${escapeHtml(s.parkingRates.motorcycle)}</li>
-          </ul>
-        </div>
-      `),
-      section('Pricing', `
-        <div class="guide-panel">
-          <ul class="clean-list">${pricing}</ul>
-        </div>
-      `),
-      section('Booking requirements', `
-        <div class="guide-panel">
-          <ul class="clean-list">${booking}</ul>
-        </div>
-      `),
-      section('Self check-in', `
-        <div class="guide-panel">
-          <ol class="clean-list ordered">${selfCheckIn}</ol>
-        </div>
-      `),
-      section('Checkout reminder', `
-        <div class="guide-panel">
-          <ol class="clean-list ordered">${checkout}</ol>
-        </div>
-      `),
-      section('House rules', `
-        <div class="guide-panel">
-          <ul class="clean-list">${rules}</ul>
-        </div>
-      `),
-    ].join('');
+        <span class="guide-chevron" aria-hidden="true"><i class="fa-solid fa-circle-chevron-right"></i></span>
+      </button>
+    `).join('');
   }
 
   function renderOwnerSettings() {
@@ -1619,6 +1674,17 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
 
     $('#reserveBtn')?.addEventListener('click', submitBooking);
 
+    $('#guideGrid')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-guide-id]');
+      if (!btn) return;
+      openGuideModal(btn.dataset.guideId);
+    });
+
+    $('#closeGuideModal')?.addEventListener('click', closeGuideModal);
+    $('#guideModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'guideModal') closeGuideModal();
+    });
+
     $('#commentForm')?.addEventListener('submit', (e) => {
       e.preventDefault();
       const name = String($('#commentName')?.value || '').trim();
@@ -1700,6 +1766,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
+        if ($('.guide-modal.open')) closeGuideModal();
         if ($('.lightbox.open')) closeLightbox();
         if ($('.site-modal.open')) closeAmenitiesModal();
       }
