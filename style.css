@@ -1130,43 +1130,52 @@ main { position: relative !important; z-index: 1 !important; padding-top: 104px 
   .topbar-actions .btn { width: auto !important; min-width: 0 !important; }
 }
 
-/* Final layout refinements */
-section.concierge {
-  margin-bottom: 56px !important;
-}
 
-/* Compact guide accordion */
+/* Compact guide cards: grid layout */
 .guide-grid {
-  gap: 6px !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
 }
 
 .guide-card {
-  border-radius: 14px !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  background: rgba(255,255,255,.90) !important;
 }
 
 .guide-summary {
-  padding: 11px 16px !important;
-  min-height: 54px !important;
+  padding: 14px 16px !important;
+  min-height: 62px !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.guide-summary-copy {
+  min-width: 0 !important;
 }
 
 .guide-summary-copy h3 {
-  font-size: 0.98rem !important;
+  margin: 0 !important;
+  font-size: .98rem !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.02em !important;
   font-weight: 700 !important;
 }
 
 .guide-chevron {
-  width: 28px !important;
-  height: 28px !important;
+  flex: 0 0 auto !important;
+  width: 34px !important;
+  height: 34px !important;
   display: grid !important;
   place-items: center !important;
   border-radius: 999px !important;
-  background: rgba(255, 90, 95, .10) !important;
+  background: rgba(255,90,95,.10) !important;
   color: var(--accent-2) !important;
-  flex: 0 0 auto !important;
 }
 
 .guide-chevron i {
-  font-size: 0.95rem !important;
+  font-size: 1rem !important;
   line-height: 1 !important;
   transition: transform .22s ease, color .22s ease !important;
 }
@@ -1176,25 +1185,32 @@ section.concierge {
 }
 
 .guide-body {
-  padding: 0 16px 14px !important;
+  padding: 0 16px 16px !important;
+  display: grid !important;
+  gap: 10px !important;
 }
 
 .guide-panel {
   border-radius: 14px !important;
-  padding: 11px 12px 10px !important;
+  padding: 12px 12px 10px !important;
 }
 
 .guide-panel h4 {
-  margin: 0 0 6px !important;
-  font-size: 0.92rem !important;
+  margin: 0 0 8px !important;
+  font-size: .92rem !important;
 }
 
-.guide-panel p {
-  margin: 0 0 6px !important;
+.guide-panel p,
+.guide-panel li {
   line-height: 1.55 !important;
 }
 
-/* Keep the footer edge-to-edge and away from the chat */
+/* Extra spacing so the footer doesn't touch the concierge section */
+section.concierge {
+  margin-bottom: 56px !important;
+}
+
+/* Keep footer edge-to-edge and dark like the topbar */
 .footer {
   width: 100% !important;
   margin: 64px 0 0 0 !important;
@@ -1243,18 +1259,29 @@ section.concierge {
   color: #dcc8ae !important;
 }
 
+/* Responsive guide grid */
+@media (max-width: 1180px) {
+  .guide-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
 @media (max-width: 820px) {
   section.concierge {
     margin-bottom: 44px !important;
   }
 
+  .guide-grid {
+    grid-template-columns: 1fr !important;
+  }
+
   .guide-summary {
-    padding: 10px 14px !important;
-    min-height: 50px !important;
+    padding: 12px 14px !important;
+    min-height: 56px !important;
   }
 
   .guide-summary-copy h3 {
-    font-size: 0.95rem !important;
+    font-size: .96rem !important;
   }
 
   .footer {
@@ -1267,7 +1294,7 @@ section.concierge {
 
 @media (max-width: 520px) {
   .guide-grid {
-    gap: 4px !important;
+    gap: 8px !important;
   }
 
   .footer {
