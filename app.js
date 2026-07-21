@@ -14,7 +14,6 @@
   const PROPERTY = {
     name: 'Luxury Stay',
     area: 'Comfort • Convenience • Home Away From Home',
-    building: 'Urban Deca Homes Ortigas Extension, Pasig City, BLDG Q - Area 4/3',
     capacity: 'Up to 9 guests',
     checkIn: '1:00 PM onwards',
     checkOut: '11:00 AM next day',
