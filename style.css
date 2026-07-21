@@ -543,8 +543,8 @@ main { position: relative; z-index: 1; }
   width: 36px; height: 36px; border: 0; border-radius: 999px; background: rgba(24,20,18,.06); font-size: 1.5rem; display: grid; place-items: center;
 }
 .footer-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.footer { width: min(1400px, calc(100% - 32px)); margin: 80px auto 28px; padding: 24px 8px 0; border-top: 1px solid rgba(24,20,18,.08); display: flex; align-items: center; justify-content: space-between; color: var(--muted); }
-.footer strong { display: block; color: var(--text); margin-bottom: 4px; }
+.footer { width: 100%; margin: 80px 0 0 0; padding: 24px 3.5vw; display: flex; align-items: center; justify-content: space-between; gap: 18px; background: rgba(20, 17, 15, 0.94); color: #f9f4ed; border: 0; border-top: 1px solid rgba(220, 200, 174, 0.16); border-radius: 0; backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); box-shadow: 0 -12px 34px rgba(0,0,0,0.22); }
+.footer strong { display: block; color: #f9f4ed; margin-bottom: 4px; }
 .footer p { margin: 0; }
 
 .lightbox {
@@ -597,7 +597,8 @@ main { position: relative; z-index: 1; }
     padding: 12px 14px;
   }
   .navlinks { order: 3; width: 100%; justify-content: center; gap: 10px 16px; }
-  .hero, .section, .footer { width: min(1400px, calc(100% - 20px)); }
+  .hero, .section { width: min(1400px, calc(100% - 20px)); }
+  .footer { width: 100% !important; margin: 80px 0 0 0 !important; }
   .hero { border-radius: 30px; min-height: auto; }
   .hero-shell { padding: 18px 16px 16px; }
   .mini-stats, .hero-values { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -1023,20 +1024,21 @@ main { position: relative !important; z-index: 1 !important; padding-top: 104px 
 .hero { width: min(1400px, calc(100% - 32px)) !important; margin: 0 auto !important; }
 
 .footer {
-  width: min(1440px, calc(100% - 24px)) !important;
-  margin: 80px auto 28px !important;
-  padding: 24px 30px !important;
+  width: 100% !important;
+  margin: 80px 0 0 0 !important;
+  padding: 24px 3.5vw !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   gap: 18px !important;
   background: rgba(20, 17, 15, 0.94) !important;
   color: #f9f4ed !important;
-  border: 1px solid rgba(220,200,174,0.16) !important;
-  border-radius: 18px !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(220, 200, 174, 0.16) !important;
+  border-radius: 0 !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-  box-shadow: 0 -10px 30px rgba(0,0,0,0.18), 0 10px 30px rgba(0,0,0,0.12) !important;
+  box-shadow: 0 -12px 34px rgba(0,0,0,0.22) !important;
 }
 .footer strong {
   display: block !important;
@@ -1118,7 +1120,8 @@ main { position: relative !important; z-index: 1 !important; padding-top: 104px 
   main { padding-top: 150px !important; }
 
   .footer {
-    width: min(1400px, calc(100% - 20px)) !important;
+    width: 100% !important;
+    margin: 80px 0 0 0 !important;
     padding: 20px 18px !important;
     flex-direction: column !important;
     align-items: flex-start !important;
@@ -1129,7 +1132,3 @@ main { position: relative !important; z-index: 1 !important; padding-top: 104px 
   .footer { gap: 12px !important; }
   .topbar-actions .btn { width: auto !important; min-width: 0 !important; }
 }
-
-
-/* Footer spacing fix */
-.footer{margin:80px 0 0 0 !important;}
