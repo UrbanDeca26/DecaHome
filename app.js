@@ -14,6 +14,7 @@
   const PROPERTY = {
     name: 'Luxury Stay',
     area: 'Comfort • Convenience • Home Away From Home',
+    building: 'Urban Deca Homes Ortigas Extension, Pasig City, BLDG Q - Area 4/3',
     capacity: 'Up to 9 guests',
     checkIn: '1:00 PM onwards',
     checkOut: '11:00 AM next day',
@@ -346,7 +347,7 @@
     return [
       {
         id: 'exact-location',
-        title: 'Exact location',
+        title: 'Location',
         icon: 'fa-location-dot',
         eyebrow: 'Location',
         summary: 'Find the building, map links, and nearby landmarks.',
@@ -396,14 +397,15 @@
     ];
   }
 
+
   function guideSectionMarkup(sectionId) {
     const s = getSettings();
-    const pricing = s.pricing.map((item) => `<div class="pricing-item">${escapeHtml(item)}</div>`).join('');
-    const booking = s.bookingRequirements.map((item) => `<li><i class="fa-solid fa-circle-check"></i><span>${escapeHtml(item)}</span></li>`).join('');
-    const selfCheckIn = s.selfCheckIn.map((item, idx) => `<li><span>${String(idx + 1).padStart(2, '0')}</span><p>${escapeHtml(item)}</p></li>`).join('');
-    const checkout = s.checkout.map((item, idx) => `<li><span>${String(idx + 1).padStart(2, '0')}</span><p>${escapeHtml(item)}</p></li>`).join('');
-    const rules = s.houseRules.map((item) => `<li><i class="fa-solid fa-circle-check"></i><span>${escapeHtml(item)}</span></li>`).join('');
-    const nearby = s.nearby.map((item) => `<li><i class="fa-solid fa-location-dot"></i><span>${escapeHtml(item)}</span></li>`).join('');
+    const nearbyChips = s.nearby.map((item) => `<li><span class="guide-chip"><i class="fa-solid fa-location-dot"></i>${escapeHtml(item)}</span></li>`).join('');
+    const bookingChips = s.bookingRequirements.map((item) => `<li><span class="guide-chip"><i class="fa-solid fa-circle-check"></i>${escapeHtml(item)}</span></li>`).join('');
+    const rulesChips = s.houseRules.map((item) => `<li><span class="guide-chip"><i class="fa-solid fa-circle-check"></i>${escapeHtml(item)}</span></li>`).join('');
+    const pricingCards = s.pricing.map((item) => `<div class="guide-pricing-card">${escapeHtml(item)}</div>`).join('');
+    const selfCheckInSteps = s.selfCheckIn.map((item, idx) => `<li class="guide-step-card"><span>${String(idx + 1).padStart(2, '0')}</span><p>${escapeHtml(item)}</p></li>`).join('');
+    const checkoutSteps = s.checkout.map((item, idx) => `<li class="guide-step-card"><span>${String(idx + 1).padStart(2, '0')}</span><p>${escapeHtml(item)}</p></li>`).join('');
 
     switch (sectionId) {
       case 'exact-location':
@@ -415,9 +417,9 @@
               <p class="guide-modal-summary">${escapeHtml(s.area)} · ${escapeHtml(s.building)}</p>
             </div>
           </div>
-          <div class="guide-modal-panels">
+          <div class="guide-modal-panels guide-modal-panels-two">
             <div class="guide-modal-panel">
-              <h4>Map links</h4>
+              <h4>Navigate</h4>
               <div class="map-actions compact">
                 <a class="btn btn-primary" href="${escapeHtml(s.googleMapsUrl || CONFIG.googleMapsUrl)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
                 <a class="btn btn-secondary" href="${escapeHtml(s.wazeUrl || CONFIG.wazeUrl)}" target="_blank" rel="noopener noreferrer">Open in Waze</a>
@@ -425,7 +427,7 @@
             </div>
             <div class="guide-modal-panel">
               <h4>Nearby places</h4>
-              <ul class="guide-checklist guide-spaced-list">${nearby}</ul>
+              <ul class="guide-chip-grid">${nearbyChips}</ul>
             </div>
           </div>`;
       case 'parking':
@@ -437,17 +439,23 @@
               <p class="guide-modal-summary">Parking is by request. Advise early if you need a slot.</p>
             </div>
           </div>
-          <div class="guide-modal-panels">
-            <div class="guide-modal-panel guide-callout">
-              <h4>Rates</h4>
-              <div class="parking-grid">
-                <div><span>Car</span><strong>${escapeHtml(s.parkingRates.car)}</strong></div>
-                <div><span>Motorcycle</span><strong>${escapeHtml(s.parkingRates.motorcycle)}</strong></div>
-              </div>
+          <div class="guide-modal-panels guide-modal-panels-two">
+            <div class="guide-modal-panel">
+              <h4>Parking note</h4>
+              <p class="guide-note">${escapeHtml(s.parking)}</p>
             </div>
             <div class="guide-modal-panel">
-              <h4>Note</h4>
-              <p>${escapeHtml(s.parking)}</p>
+              <h4>Parking rates</h4>
+              <div class="guide-rate-grid">
+                <div class="guide-rate-card">
+                  <span>Car</span>
+                  <strong>${escapeHtml(s.parkingRates.car)}</strong>
+                </div>
+                <div class="guide-rate-card">
+                  <span>Motorcycle</span>
+                  <strong>${escapeHtml(s.parkingRates.motorcycle)}</strong>
+                </div>
+              </div>
             </div>
           </div>`;
       case 'pricing':
@@ -456,16 +464,16 @@
             <div class="guide-modal-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
             <div>
               <div class="guide-modal-label">Rates</div>
-              <p class="guide-modal-summary">Stay options and add-ons, laid out for quick scanning.</p>
+              <p class="guide-modal-summary">Review the stay rates and the refundable deposit.</p>
             </div>
           </div>
           <div class="guide-modal-panels">
             <div class="guide-modal-panel">
               <h4>Pricing guide</h4>
-              <div class="pricing-grid">${pricing}</div>
+              <div class="guide-pricing-grid">${pricingCards}</div>
             </div>
-            <div class="guide-modal-panel guide-callout">
-              <h4>Deposit</h4>
+            <div class="guide-modal-panel guide-deposit-card">
+              <h4>Security deposit</h4>
               <p>${escapeHtml(s.securityDeposit)}</p>
             </div>
           </div>`;
@@ -480,7 +488,7 @@
           </div>
           <div class="guide-modal-panels">
             <div class="guide-modal-panel">
-              <ul class="guide-checklist">${booking}</ul>
+              <ul class="guide-chip-grid">${bookingChips}</ul>
             </div>
           </div>`;
       case 'self-checkin':
@@ -494,7 +502,7 @@
           </div>
           <div class="guide-modal-panels">
             <div class="guide-modal-panel">
-              <ol class="guide-steps">${selfCheckIn}</ol>
+              <ol class="guide-step-grid">${selfCheckInSteps}</ol>
             </div>
           </div>`;
       case 'checkout-reminder':
@@ -508,7 +516,7 @@
           </div>
           <div class="guide-modal-panels">
             <div class="guide-modal-panel">
-              <ol class="guide-steps">${checkout}</ol>
+              <ol class="guide-step-grid">${checkoutSteps}</ol>
             </div>
           </div>`;
       case 'house-rules':
@@ -522,7 +530,7 @@
           </div>
           <div class="guide-modal-panels">
             <div class="guide-modal-panel">
-              <ul class="guide-rules">${rules}</ul>
+              <ul class="guide-chip-grid">${rulesChips}</ul>
             </div>
           </div>`;
       default:
