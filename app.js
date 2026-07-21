@@ -358,7 +358,7 @@
           <div class="guide-summary-copy">
             <h3>${escapeHtml(title)}</h3>
           </div>
-          <span class="guide-chevron" aria-hidden="true">⌄</span>
+          <span class="guide-chevron" aria-hidden="true"><i class="fa-solid fa-circle-chevron-right"></i></span>
         </summary>
         <div class="guide-body">${body}</div>
       </details>
