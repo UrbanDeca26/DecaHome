@@ -543,9 +543,9 @@ main { position: relative; z-index: 1; }
   width: 36px; height: 36px; border: 0; border-radius: 999px; background: rgba(24,20,18,.06); font-size: 1.5rem; display: grid; place-items: center;
 }
 .footer-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.footer { width: 100% !important; margin: 0 !important; padding: 24px 3.5vw !important; display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 18px !important; background: rgba(20, 17, 15, 0.94) !important; color: #f9f4ed !important; border: 0 !important; border-top: 1px solid rgba(220, 200, 174, 0.16) !important; border-radius: 0 !important; backdrop-filter: blur(24px) saturate(180%) !important; -webkit-backdrop-filter: blur(24px) saturate(180%) !important; box-shadow: 0 -12px 34px rgba(0,0,0,.22) !important; }
-.footer strong { display: block !important; color: #f9f4ed !important; margin-bottom: 4px !important; }
-.footer p, .footer .footer-copyright { margin: 0 !important; color: #dcc8ae !important; }
+.footer { width: min(1400px, calc(100% - 32px)); margin: 80px auto 28px; padding: 24px 8px 0; border-top: 1px solid rgba(24,20,18,.08); display: flex; align-items: center; justify-content: space-between; color: var(--muted); }
+.footer strong { display: block; color: var(--text); margin-bottom: 4px; }
+.footer p { margin: 0; }
 
 .lightbox {
   position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
@@ -1023,21 +1023,20 @@ main { position: relative !important; z-index: 1 !important; padding-top: 104px 
 .hero { width: min(1400px, calc(100% - 32px)) !important; margin: 0 auto !important; }
 
 .footer {
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 24px 3.5vw !important;
+  width: min(1440px, calc(100% - 24px)) !important;
+  margin: 80px auto 28px !important;
+  padding: 24px 30px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   gap: 18px !important;
   background: rgba(20, 17, 15, 0.94) !important;
   color: #f9f4ed !important;
-  border: 0 !important;
-  border-top: 1px solid rgba(220, 200, 174, 0.16) !important;
-  border-radius: 0 !important;
+  border: 1px solid rgba(220,200,174,0.16) !important;
+  border-radius: 18px !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-  box-shadow: 0 -12px 34px rgba(0,0,0,0.22) !important;
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.18), 0 10px 30px rgba(0,0,0,0.12) !important;
 }
 .footer strong {
   display: block !important;
@@ -1117,12 +1116,12 @@ main { position: relative !important; z-index: 1 !important; padding-top: 104px 
   .topbar-actions .btn { min-width: 0 !important; padding: 10px 16px !important; }
 
   main { padding-top: 150px !important; }
+
   .footer {
-    width: 100% !important;
+    width: min(1400px, calc(100% - 20px)) !important;
     padding: 20px 18px !important;
     flex-direction: column !important;
     align-items: flex-start !important;
-  }
   }
 }
 
@@ -1130,3 +1129,7 @@ main { position: relative !important; z-index: 1 !important; padding-top: 104px 
   .footer { gap: 12px !important; }
   .topbar-actions .btn { width: auto !important; min-width: 0 !important; }
 }
+
+
+/* Footer spacing fix */
+.footer{margin:80px 0 0 0 !important;}
