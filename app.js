@@ -342,93 +342,193 @@
   }
 
 
-  function getGuideSections() {
-    const s = getSettings();
-    const pricing = s.pricing.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-    const booking = s.bookingRequirements.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-    const selfCheckIn = s.selfCheckIn.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-    const checkout = s.checkout.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-    const rules = s.houseRules.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-    const nearby = s.nearby.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
 
+  function getGuideSections() {
     return [
       {
         id: 'exact-location',
-        title: 'Location',
-        body: `
-          <div class="guide-panel">
-            <p class="guide-location">${escapeHtml(s.area)}</p>
-            <p class="guide-location">${escapeHtml(s.building)}</p>
-            <div class="map-actions compact">
-              <a class="btn btn-primary" href="${escapeHtml(s.googleMapsUrl || CONFIG.googleMapsUrl)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
-              <a class="btn btn-secondary" href="${escapeHtml(s.wazeUrl || CONFIG.wazeUrl)}" target="_blank" rel="noopener noreferrer">Open in Waze</a>
-            </div>
-          </div>
-          <div class="guide-panel">
-            <h4>Nearby places</h4>
-            <ul class="clean-list">${nearby}</ul>
-          </div>
-        `,
+        title: 'Exact location',
+        icon: 'fa-location-dot',
+        eyebrow: 'Location',
+        summary: 'Find the building, map links, and nearby landmarks.',
       },
       {
         id: 'parking',
         title: 'Parking',
-        body: `
-          <div class="guide-panel">
-            <ul class="clean-list">
-              <li>${escapeHtml(s.parking)}</li>
-              <li>Car: ${escapeHtml(s.parkingRates.car)}</li>
-              <li>Motorcycle: ${escapeHtml(s.parkingRates.motorcycle)}</li>
-            </ul>
-          </div>
-        `,
+        icon: 'fa-square-parking',
+        eyebrow: 'Vehicle access',
+        summary: 'Check availability and the current parking rates.',
       },
       {
         id: 'pricing',
         title: 'Pricing',
-        body: `
-          <div class="guide-panel">
-            <ul class="clean-list">${pricing}</ul>
-          </div>
-        `,
+        icon: 'fa-money-bill-wave',
+        eyebrow: 'Rates',
+        summary: 'Review the stay rates and the refundable deposit.',
       },
       {
         id: 'booking-requirements',
         title: 'Booking requirements',
-        body: `
-          <div class="guide-panel">
-            <ul class="clean-list">${booking}</ul>
-          </div>
-        `,
+        icon: 'fa-clipboard-list',
+        eyebrow: 'Before booking',
+        summary: 'See what is needed to confirm the reservation.',
       },
       {
         id: 'self-checkin',
         title: 'Self check-in',
-        body: `
-          <div class="guide-panel">
-            <ol class="clean-list ordered">${selfCheckIn}</ol>
-          </div>
-        `,
+        icon: 'fa-key',
+        eyebrow: 'Arrival',
+        summary: 'Follow the step-by-step self check-in flow.',
       },
       {
         id: 'checkout-reminder',
-        title: 'Checkout reminder',
-        body: `
-          <div class="guide-panel">
-            <ol class="clean-list ordered">${checkout}</ol>
-          </div>
-        `,
+        title: 'Checkout',
+        icon: 'fa-right-from-bracket',
+        eyebrow: 'Departure',
+        summary: 'Review the departure checklist before leaving.',
       },
       {
         id: 'house-rules',
         title: 'House rules',
-        body: `
-          <div class="guide-panel">
-            <ul class="clean-list">${rules}</ul>
-          </div>
-        `,
+        icon: 'fa-house',
+        eyebrow: 'House policy',
+        summary: 'Know the essentials for a smooth stay.',
       },
     ];
+  }
+
+  function guideSectionMarkup(sectionId) {
+    const s = getSettings();
+    const pricing = s.pricing.map((item) => `<div class="pricing-item">${escapeHtml(item)}</div>`).join('');
+    const booking = s.bookingRequirements.map((item) => `<li><i class="fa-solid fa-circle-check"></i><span>${escapeHtml(item)}</span></li>`).join('');
+    const selfCheckIn = s.selfCheckIn.map((item, idx) => `<li><span>${String(idx + 1).padStart(2, '0')}</span><p>${escapeHtml(item)}</p></li>`).join('');
+    const checkout = s.checkout.map((item, idx) => `<li><span>${String(idx + 1).padStart(2, '0')}</span><p>${escapeHtml(item)}</p></li>`).join('');
+    const rules = s.houseRules.map((item) => `<li><i class="fa-solid fa-circle-check"></i><span>${escapeHtml(item)}</span></li>`).join('');
+    const nearby = s.nearby.map((item) => `<li><i class="fa-solid fa-location-dot"></i><span>${escapeHtml(item)}</span></li>`).join('');
+
+    switch (sectionId) {
+      case 'exact-location':
+        return `
+          <div class="guide-modal-hero">
+            <div class="guide-modal-icon"><i class="fa-solid fa-location-dot"></i></div>
+            <div>
+              <div class="guide-modal-label">Location</div>
+              <p class="guide-modal-summary">${escapeHtml(s.area)} · ${escapeHtml(s.building)}</p>
+            </div>
+          </div>
+          <div class="guide-modal-panels">
+            <div class="guide-modal-panel">
+              <h4>Map links</h4>
+              <div class="map-actions compact">
+                <a class="btn btn-primary" href="${escapeHtml(s.googleMapsUrl || CONFIG.googleMapsUrl)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
+                <a class="btn btn-secondary" href="${escapeHtml(s.wazeUrl || CONFIG.wazeUrl)}" target="_blank" rel="noopener noreferrer">Open in Waze</a>
+              </div>
+            </div>
+            <div class="guide-modal-panel">
+              <h4>Nearby places</h4>
+              <ul class="guide-checklist guide-spaced-list">${nearby}</ul>
+            </div>
+          </div>`;
+      case 'parking':
+        return `
+          <div class="guide-modal-hero">
+            <div class="guide-modal-icon"><i class="fa-solid fa-square-parking"></i></div>
+            <div>
+              <div class="guide-modal-label">Vehicle access</div>
+              <p class="guide-modal-summary">Parking is by request. Advise early if you need a slot.</p>
+            </div>
+          </div>
+          <div class="guide-modal-panels">
+            <div class="guide-modal-panel guide-callout">
+              <h4>Rates</h4>
+              <div class="parking-grid">
+                <div><span>Car</span><strong>${escapeHtml(s.parkingRates.car)}</strong></div>
+                <div><span>Motorcycle</span><strong>${escapeHtml(s.parkingRates.motorcycle)}</strong></div>
+              </div>
+            </div>
+            <div class="guide-modal-panel">
+              <h4>Note</h4>
+              <p>${escapeHtml(s.parking)}</p>
+            </div>
+          </div>`;
+      case 'pricing':
+        return `
+          <div class="guide-modal-hero">
+            <div class="guide-modal-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+            <div>
+              <div class="guide-modal-label">Rates</div>
+              <p class="guide-modal-summary">Stay options and add-ons, laid out for quick scanning.</p>
+            </div>
+          </div>
+          <div class="guide-modal-panels">
+            <div class="guide-modal-panel">
+              <h4>Pricing guide</h4>
+              <div class="pricing-grid">${pricing}</div>
+            </div>
+            <div class="guide-modal-panel guide-callout">
+              <h4>Deposit</h4>
+              <p>${escapeHtml(s.securityDeposit)}</p>
+            </div>
+          </div>`;
+      case 'booking-requirements':
+        return `
+          <div class="guide-modal-hero">
+            <div class="guide-modal-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+            <div>
+              <div class="guide-modal-label">Before booking</div>
+              <p class="guide-modal-summary">Have these details ready before confirming the stay.</p>
+            </div>
+          </div>
+          <div class="guide-modal-panels">
+            <div class="guide-modal-panel">
+              <ul class="guide-checklist">${booking}</ul>
+            </div>
+          </div>`;
+      case 'self-checkin':
+        return `
+          <div class="guide-modal-hero">
+            <div class="guide-modal-icon"><i class="fa-solid fa-key"></i></div>
+            <div>
+              <div class="guide-modal-label">Arrival</div>
+              <p class="guide-modal-summary">Self check-in starts at ${escapeHtml(s.checkIn)} and is done in a few clear steps.</p>
+            </div>
+          </div>
+          <div class="guide-modal-panels">
+            <div class="guide-modal-panel">
+              <ol class="guide-steps">${selfCheckIn}</ol>
+            </div>
+          </div>`;
+      case 'checkout-reminder':
+        return `
+          <div class="guide-modal-hero">
+            <div class="guide-modal-icon"><i class="fa-solid fa-right-from-bracket"></i></div>
+            <div>
+              <div class="guide-modal-label">Departure</div>
+              <p class="guide-modal-summary">Checkout is at ${escapeHtml(s.checkOut)}. Use this checklist before you go.</p>
+            </div>
+          </div>
+          <div class="guide-modal-panels">
+            <div class="guide-modal-panel">
+              <ol class="guide-steps">${checkout}</ol>
+            </div>
+          </div>`;
+      case 'house-rules':
+        return `
+          <div class="guide-modal-hero">
+            <div class="guide-modal-icon"><i class="fa-solid fa-house"></i></div>
+            <div>
+              <div class="guide-modal-label">House policy</div>
+              <p class="guide-modal-summary">A short list of rules that help keep the stay smooth for everyone.</p>
+            </div>
+          </div>
+          <div class="guide-modal-panels">
+            <div class="guide-modal-panel">
+              <ul class="guide-rules">${rules}</ul>
+            </div>
+          </div>`;
+      default:
+        return '';
+    }
   }
 
   function openGuideModal(sectionId) {
@@ -441,7 +541,7 @@
     if (!section) return;
 
     title.textContent = section.title;
-    body.innerHTML = section.body;
+    body.innerHTML = guideSectionMarkup(sectionId);
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
   }
@@ -464,9 +564,11 @@
     grid.innerHTML = sections.map((section) => `
       <button class="guide-card" type="button" data-guide-id="${escapeHtml(section.id)}" aria-haspopup="dialog" aria-controls="guideModal">
         <div class="guide-card-copy">
+          <span class="guide-card-kicker">${escapeHtml(section.eyebrow)}</span>
           <h3>${escapeHtml(section.title)}</h3>
+          <p>${escapeHtml(section.summary)}</p>
         </div>
-        <span class="guide-chevron" aria-hidden="true"><i class="fa-solid fa-circle-chevron-right"></i></span>
+        <span class="guide-card-icon" aria-hidden="true"><i class="fa-solid ${escapeHtml(section.icon)}"></i></span>
       </button>
     `).join('');
   }
@@ -493,7 +595,7 @@
         <label>Hero title <input id="settingsHeroTitle" type="text" value="${escapeHtml(s.heroTitle || '')}" /></label>
         <label>Hero subtitle <textarea id="settingsHeroSubtitle">${escapeHtml(s.heroSubtitle || '')}</textarea></label>
         <div class="owner-row">
-          <label>Location <input id="settingsArea" type="text" value="${escapeHtml(s.area)}" /></label>
+          <label>Exact location <input id="settingsArea" type="text" value="${escapeHtml(s.area)}" /></label>
           <label>Building / unit detail <input id="settingsBuilding" type="text" value="${escapeHtml(s.building)}" /></label>
         </div>
         <div class="owner-row">
