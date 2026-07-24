@@ -747,7 +747,7 @@ input:focus, select:focus, textarea:focus {
             <div class="section-head" style="align-items:center;">
               <div>
                 <h3 style="margin:0;">Main page content map</h3>
-                <p class="muted" style="margin:6px 0 0;">Every guest-facing section is editable here. Use the edit buttons to jump straight to the correct manager.</p>
+                <p class="muted" style="margin:6px 0 0;">Every guest-facing section is editable here. Click <strong>Edit</strong> on any card to jump to the matching field, then press <strong>Save All Changes</strong> when you are done.</p>
               </div>
             </div>
             <div class="card-list" id="mainPageMap"></div>
@@ -810,11 +810,7 @@ input:focus, select:focus, textarea:focus {
             </div>
             <div class="panel">
               <h3>Quick block dates</h3>
-              <p class="muted">Use this to block maintenance or private-use dates. Reserved dates are created automatically from confirmed bookings and show an X on the calendar.</p>
-              <div class="admin-empty" style="margin-top:12px; padding:12px 14px;">
-                <strong>Reservation status is automatic.</strong>
-                <div class="muted" style="margin-top:4px;">Only <strong>Blocked</strong>, <strong>Maintenance</strong>, and <strong>Owner stay</strong> can be created here.</div>
-              </div>
+              <p class="muted">Use this to block maintenance or private use dates. Reservations still come from bookings.</p>
               <div class="form-grid" style="margin-top:12px;">
                 <label class="field">Date
                   <input type="date" id="blockDateInput" />
@@ -831,11 +827,10 @@ input:focus, select:focus, textarea:focus {
                 </label>
               </div>
               <div class="section-actions" style="margin-top:12px;">
-                <button class="btn btn-primary" id="addBlockDateBtn" type="button">Save block</button>
-                <button class="btn btn-secondary" id="clearBlocksBtn" type="button">Clear owner blocks</button>
+                <button class="btn btn-primary" id="addBlockDateBtn" type="button">Block date</button>
+                <button class="btn btn-secondary" id="clearBlocksBtn" type="button">Clear all blocked dates</button>
               </div>
               <div class="card-list" id="blockedDatesList" style="margin-top:14px;"></div>
-              <div class="card-list" id="reservedDatesList" style="margin-top:14px;"></div>
             </div>
           </div>
         </section>
@@ -898,7 +893,7 @@ input:focus, select:focus, textarea:focus {
           <div class="grid-2">
             <div class="panel">
               <div class="admin-empty" style="margin:0;">
-                Gallery assets are fixed. Select <strong>Edit</strong> on an existing item to change its label or type, or use <strong>Hide</strong>, <strong>Feature</strong>, <strong>Delete</strong>, and <strong>Restore defaults</strong>.
+                Gallery assets are fixed. Select <strong>Edit</strong> on an existing item to change its label, or use <strong>Hide</strong>, <strong>Feature</strong>, <strong>Delete</strong>, and <strong>Restore defaults</strong>. Uploading new photos and videos is disabled.
               </div>
               <form id="mediaForm" class="admin-form" style="margin-top:14px;">
                 <div class="form-grid">
@@ -910,7 +905,7 @@ input:focus, select:focus, textarea:focus {
                   </label>
                 </div>
                 <div class="section-actions" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
-                  <button class="btn btn-primary" id="mediaSubmitBtn" type="submit">Update selected media</button>
+                  <button class="btn btn-primary" id="mediaSubmitBtn" type="submit">Edit selected media</button>
                   <button class="btn btn-secondary" id="cancelMediaEditBtn" type="button">Cancel edit</button>
                   <button class="btn btn-secondary" id="restoreMediaDefaultsBtn" type="button">Restore defaults</button>
                 </div>
@@ -998,26 +993,34 @@ input:focus, select:focus, textarea:focus {
             <div>
               <span>Stay Guide</span>
               <h2>Editable information panels</h2>
-              <p>Control the visible guide content for Wi-Fi, parking, check-in, checkout, rules, nearby places, and emergency info.</p>
+              <p>Control the visible guide content for Wi-Fi, parking, check-in, checkout, rules, nearby places, and emergency info. Use the Edit buttons in the preview cards to jump to each field.</p>
             </div>
           </div>
           <div class="grid-2">
             <div class="panel">
               <form id="guideForm" class="admin-form">
+                <p class="field-note" style="margin:0 0 8px;">Each field is editable. Use one line per item. The preview cards on the right each have an Edit button that jumps to the matching field.</p>
                 <label class="field">Booking requirements
-                  <textarea id="bookingRequirementsInput"></textarea>
+                  <textarea id="bookingRequirementsInput" placeholder="Valid government-issued ID for all guests
+One email address and contact number
+PHP 1,000 security deposit / reservation fee"></textarea>
                 </label>
                 <label class="field">Self check-in steps
-                  <textarea id="selfCheckInInput"></textarea>
+                  <textarea id="selfCheckInInput" placeholder="Pick up the tap card from Locker 706...
+Take Elevator Area 4..."></textarea>
                 </label>
                 <label class="field">Checkout reminders
-                  <textarea id="checkoutInput"></textarea>
+                  <textarea id="checkoutInput" placeholder="Switch all breaker levers down.
+Return the tap card to Locker 706."></textarea>
                 </label>
                 <label class="field">House rules
-                  <textarea id="houseRulesInput"></textarea>
+                  <textarea id="houseRulesInput" placeholder="Clean as you go
+No smoking or vaping inside the unit"></textarea>
                 </label>
                 <label class="field">Nearby places
-                  <textarea id="nearbyInput"></textarea>
+                  <textarea id="nearbyInput" placeholder="SM East Ortigas
+Bridgetowne
+SM Megamall"></textarea>
                 </label>
                 <div class="section-actions" style="margin-top:14px;">
                   <button class="btn btn-primary" type="submit">Save guide</button>
@@ -1066,29 +1069,33 @@ input:focus, select:focus, textarea:focus {
             <div>
               <span>Luna AI</span>
               <h2>Property knowledge and responses</h2>
-              <p>Edit the knowledge that powers Luna’s answers without changing the public layout.</p>
+              <p>Edit the knowledge that powers Luna’s answers without changing the public layout. Use the Edit buttons in the preview cards to jump to each field.</p>
             </div>
           </div>
           <div class="grid-2">
             <div class="panel">
               <form id="lunaForm" class="admin-form">
+                <p class="field-note" style="margin:0 0 8px;">These fields power Luna’s answers. Click <strong>Edit</strong> on the preview cards or use the editor below to update each response source.</p>
                 <label class="field">Property description
-                  <textarea id="lunaDescriptionInput"></textarea>
+                  <textarea id="lunaDescriptionInput" placeholder="Write the public-facing property summary here."></textarea>
                 </label>
                 <label class="field">FAQ entries (one per line: Question | Answer)
-                  <textarea id="lunaFaqsInput"></textarea>
+                  <textarea id="lunaFaqsInput" placeholder="Do you allow early check-in? | Early check-in depends on availability."></textarea>
                 </label>
                 <label class="field">House rules
-                  <textarea id="lunaHouseRulesInput"></textarea>
+                  <textarea id="lunaHouseRulesInput" placeholder="No smoking inside the unit.
+Quiet hours are 10 PM to 8 AM."></textarea>
                 </label>
                 <label class="field">Parking information
-                  <textarea id="lunaParkingInput"></textarea>
+                  <textarea id="lunaParkingInput" placeholder="Parking is by request. Car: PHP 400.00 per 24 hrs."></textarea>
                 </label>
                 <label class="field">Contact information
-                  <textarea id="lunaContactInput"></textarea>
+                  <textarea id="lunaContactInput" placeholder="Host email, phone number, and reply instructions."></textarea>
                 </label>
                 <label class="field">Local recommendations
-                  <textarea id="lunaRecommendationsInput"></textarea>
+                  <textarea id="lunaRecommendationsInput" placeholder="SM East Ortigas
+Bridgetowne
+Tiendesitas"></textarea>
                 </label>
                 <div class="section-actions" style="margin-top:14px;">
                   <button class="btn btn-primary" type="submit">Save Luna data</button>

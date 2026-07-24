@@ -25,7 +25,6 @@
     iconLibraryOpen: false,
     iconSelectionMode: 'auto',
     selectedBooking: null,
-    selectedCalendarDate: '',
     developerHealth: {
       auth: 'Unknown',
       bookings: 'Unknown',
@@ -99,6 +98,22 @@
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  function focusEditor(targetSelector) {
+    if (!targetSelector) return;
+    const target = $(targetSelector);
+    if (!target) return;
+    const section = target.closest('.admin-section, .panel, .settings-group, .card-item') || target;
+    if (section && typeof section.scrollIntoView === 'function') {
+      section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    const flashTarget = target.closest('.field, .settings-group, .card-item, .admin-form') || target;
+    flashTarget.classList.add('editor-target-flash');
+    window.setTimeout(() => flashTarget.classList.remove('editor-target-flash'), 1600);
+    window.setTimeout(() => {
+      if (typeof target.focus === 'function') target.focus({ preventScroll: true });
+      if (typeof target.select === 'function') target.select();
+    }, 150);
+  }
 
   function currentSummary() {
     const today = new Date();
@@ -581,7 +596,6 @@
     const grid = $('#calendarGrid');
     const title = $('#calendarTitle');
     const blockedList = $('#blockedDatesList');
-    const reservedList = $('#reservedDatesList');
     if (!grid || !title || !blockedList) return;
 
     const monthStart = state.calendarMonth;
@@ -617,9 +631,9 @@
       const dateIso = toISODate(date);
       const isToday = dateIso === toISODate(new Date());
       const data = blocked[dateIso];
-      const selected = state.selectedCalendarDate === dateIso;
       let label = 'Available';
       let cls = 'calendar-day';
+      let isReserved = false;
       if (data) {
         label = data.type || 'Blocked';
         cls += ` is-${data.type || 'blocked'}`;
@@ -630,15 +644,13 @@
           return !Number.isNaN(checkin.getTime()) && !Number.isNaN(checkout.getTime()) && date >= checkin && date < checkout && String(item.status || '').toLowerCase() !== 'cancelled';
         });
         if (booking) {
-          label = 'Reserved';
+          label = booking.status || 'Reserved';
           cls += ' is-reserved';
+          isReserved = true;
         }
       }
-      if (selected) cls += ' is-selected';
       if (isToday) cls += ' is-today';
-      const titleText = data
-        ? `${dateIso} — ${label}${data.note ? ` · ${data.note}` : ''}`
-        : `${dateIso} — ${label}`;
+      const titleText = `${dateIso} — ${label}${data?.note ? ` · ${data.note}` : ''}`;
       cells.push(`
         <button class="${cls}" data-calendar-date="${dateIso}" type="button" title="${S.escapeHtml(titleText)}" aria-label="${S.escapeHtml(titleText)}">
           <span class="day-num">${day}</span>
@@ -662,42 +674,12 @@
           <button class="btn btn-secondary small" data-remove-block="${S.escapeHtml(item.date)}" type="button">Remove</button>
         </div>
       </div>
-    `).join('') : '<div class="admin-empty">No owner blocks set.</div>';
-
-    if (reservedList) {
-      const reservedEntries = bookingsInMonth
-        .slice()
-        .sort((a, b) => String(a.checkin || '').localeCompare(String(b.checkin || '')))
-        .slice(0, 12);
-      reservedList.innerHTML = reservedEntries.length ? reservedEntries.map((booking) => `
-        <div class="card-item">
-          <div class="card-item-head">
-            <div>
-              <strong>${S.escapeHtml(booking.booking_ref || 'Reserved stay')}</strong>
-              <span>${S.escapeHtml(S.formatDate(booking.checkin))} → ${S.escapeHtml(S.formatDate(booking.checkout))}</span>
-            </div>
-            <span class="badge reserved">Reserved</span>
-          </div>
-          <div class="muted">Automatic booking. Status: ${S.escapeHtml(String(booking.status || 'pending'))}</div>
-        </div>
-      `).join('') : '<div class="admin-empty">No reserved dates in this month.</div>';
-    }
+    `).join('') : '<div class="admin-empty">No blocked dates set.</div>';
 
     $$('#calendarGrid [data-calendar-date]').forEach((button) => {
       button.addEventListener('click', () => {
         if (button.classList.contains('is-reserved')) return;
-        const dateIso = button.dataset.calendarDate;
-        state.selectedCalendarDate = dateIso;
-        const input = $('#blockDateInput');
-        if (input) input.value = dateIso;
-        const existing = state.blockedDates.find((item) => item.date === dateIso);
-        const typeInput = $('#blockDateType');
-        const noteInput = $('#blockDateNote');
-        if (existing) {
-          if (typeInput) typeInput.value = existing.type || 'blocked';
-          if (noteInput) noteInput.value = existing.note || '';
-        }
-        renderCalendar();
+        toggleBlockDate(button.dataset.calendarDate);
       });
     });
     $$('#blockedDatesList [data-remove-block]').forEach((button) => {
@@ -706,24 +688,13 @@
   }
 
   function toggleBlockDate(dateIso) {
-    const existingIndex = state.blockedDates.findIndex((item) => item.date === dateIso);
-    if (existingIndex >= 0) {
-      const current = state.blockedDates[existingIndex];
-      state.blockedDates[existingIndex] = {
-        ...current,
-        date: dateIso,
-        type: String($('#blockDateType')?.value || current.type || 'blocked').trim() || 'blocked',
-        note: String($('#blockDateNote')?.value || current.note || '').trim(),
-      };
+    const existing = state.blockedDates.find((item) => item.date === dateIso);
+    if (existing) {
+      state.blockedDates = state.blockedDates.filter((item) => item.date !== dateIso);
     } else {
-      state.blockedDates.unshift({
-        date: dateIso,
-        type: String($('#blockDateType')?.value || 'blocked').trim() || 'blocked',
-        note: String($('#blockDateNote')?.value || '').trim(),
-      });
+      state.blockedDates.unshift({ date: dateIso, type: $('#blockDateType')?.value || 'blocked', note: $('#blockDateNote')?.value || '' });
     }
     S.saveBlockedDates(state.blockedDates);
-    state.selectedCalendarDate = dateIso;
     renderCalendar();
     broadcastUpdate('availability', ['blockedDates']);
   }
@@ -1015,15 +986,22 @@
     const preview = $('#guidePreview');
     if (!preview) return;
     const settings = state.settings;
-    preview.innerHTML = [
-      { label: 'Booking requirements', items: settings.bookingRequirements, note: 'Guest IDs, contact info, and reservation rules.' },
-      { label: 'Self check-in', items: settings.selfCheckIn, note: 'Tap-card arrival steps and unit access.' },
-      { label: 'Checkout reminders', items: settings.checkout, note: 'Departure checklist and housekeeping steps.' },
-      { label: 'House rules', items: settings.houseRules, note: 'Stay rules shown to guests.' },
-      { label: 'Nearby places', items: settings.nearby, note: 'Landmarks and local recommendations.' },
-    ].map((section) => `
+    const sections = [
+      { label: 'Booking requirements', items: settings.bookingRequirements, note: 'Guest IDs, contact info, and reservation rules.', focus: '#bookingRequirementsInput' },
+      { label: 'Self check-in', items: settings.selfCheckIn, note: 'Tap-card arrival steps and unit access.', focus: '#selfCheckInInput' },
+      { label: 'Checkout reminders', items: settings.checkout, note: 'Departure checklist and housekeeping steps.', focus: '#checkoutInput' },
+      { label: 'House rules', items: settings.houseRules, note: 'Stay rules shown to guests.', focus: '#houseRulesInput' },
+      { label: 'Nearby places', items: settings.nearby, note: 'Landmarks and local recommendations.', focus: '#nearbyInput' },
+    ];
+    preview.innerHTML = sections.map((section) => `
       <div class="card-item">
-        <div class="card-item-head"><strong>${S.escapeHtml(section.label)}</strong><span>${section.items.length} entries</span></div>
+        <div class="card-item-head">
+          <div>
+            <strong>${S.escapeHtml(section.label)}</strong>
+            <span>${section.items.length} entries</span>
+          </div>
+          <button class="btn btn-primary small" type="button" data-focus-target="${S.escapeHtml(section.focus)}">Edit</button>
+        </div>
         <p>${S.escapeHtml(section.note)}</p>
       </div>
     `).join('');
@@ -1058,13 +1036,18 @@
 
     const preview = $('#lunaPreview');
     preview.innerHTML = [
-      { label: 'Description', value: settings.lunaDescription },
-      { label: 'Parking', value: settings.lunaParking },
-      { label: 'Contact', value: settings.lunaContact },
-      { label: 'Recommendations', value: (settings.lunaRecommendations || []).join(' · ') },
+      { label: 'Description', value: settings.lunaDescription, focus: '#lunaDescriptionInput' },
+      { label: 'FAQs', value: `${(settings.lunaFaqs || []).length} entries`, focus: '#lunaFaqsInput' },
+      { label: 'Parking', value: settings.lunaParking, focus: '#lunaParkingInput' },
+      { label: 'House rules', value: `${(settings.lunaHouseRules || []).length} entries`, focus: '#lunaHouseRulesInput' },
+      { label: 'Contact', value: settings.lunaContact, focus: '#lunaContactInput' },
+      { label: 'Recommendations', value: (settings.lunaRecommendations || []).join(' · '), focus: '#lunaRecommendationsInput' },
     ].map((item) => `
       <div class="card-item">
-        <div class="card-item-head"><strong>${S.escapeHtml(item.label)}</strong></div>
+        <div class="card-item-head">
+          <div><strong>${S.escapeHtml(item.label)}</strong></div>
+          <button class="btn btn-primary small" type="button" data-focus-target="${S.escapeHtml(item.focus)}">Edit</button>
+        </div>
         <p>${S.escapeHtml(item.value || '—')}</p>
       </div>
     `).join('');
@@ -1100,21 +1083,22 @@
     $('#themeStartNightInput').value = settings.themeStartNight || '18:00';
 
     const socialSummary = [settings.socials?.facebook, settings.socials?.instagram, settings.socials?.tiktok, settings.socials?.website].filter(Boolean).join(' · ') || '—';
-    $('#settingsPreview').innerHTML = [
-      { label: 'Property name', value: settings.propertyName || settings.name },
-      { label: 'Hero copy', value: [settings.heroEyebrow, settings.heroTitle].filter(Boolean).join(' — ') || '—' },
-      { label: 'Hero subtitle', value: settings.heroSubtitle || '—' },
-      { label: 'Location & vehicle', value: `${settings.area || '—'} · ${settings.building || '—'} · ${settings.parking || 'Parking note'}` },
-      { label: 'Parking rates', value: `${settings.parkingRates?.car || '—'} · ${settings.parkingRates?.motorcycle || '—'}` },
-      { label: 'Google Maps / Waze', value: [settings.googleMapsUrl, settings.wazeUrl].filter(Boolean).join(' · ') || '—' },
-      { label: 'Check-in / checkout', value: `${settings.checkIn || '—'} · ${settings.checkOut || '—'}` },
-      { label: 'Security deposit', value: settings.securityDeposit || '—' },
-      { label: 'Contact', value: `${settings.contactEmail || '—'} · ${settings.contactPhone || '—'}` },
-      { label: 'Theme', value: `${settings.themeStartDay || '06:00'} / ${settings.themeStartNight || '18:00'}` },
-      { label: 'Socials', value: socialSummary },
-    ].map((item) => `
+    const previewItems = [
+      { label: 'Hero & booking labels', value: [settings.propertyName || settings.name, settings.heroEyebrow, settings.heroTitle].filter(Boolean).join(' — ') || '—', focus: '#propertyNameInput' },
+      { label: 'Location & vehicle', value: `${settings.area || '—'} · ${settings.building || '—'} · ${settings.parking || 'Parking note'}`, focus: '#addressInput' },
+      { label: 'Parking rates', value: `${settings.parkingRates?.car || '—'} · ${settings.parkingRates?.motorcycle || '—'}`, focus: '#settingsCarParkingRateInput' },
+      { label: 'Check-in / checkout', value: `${settings.checkIn || '—'} · ${settings.checkOut || '—'}`, focus: '#settingsCheckInInput' },
+      { label: 'Security deposit', value: settings.securityDeposit || '—', focus: '#settingsSecurityDepositInput' },
+      { label: 'Contact', value: `${settings.contactEmail || '—'} · ${settings.contactPhone || '—'}`, focus: '#contactEmailInput' },
+      { label: 'Theme', value: `${settings.themeStartDay || '06:00'} / ${settings.themeStartNight || '18:00'}`, focus: '#themeStartDayInput' },
+      { label: 'Socials', value: socialSummary, focus: '#facebookInput' },
+    ];
+    $('#settingsPreview').innerHTML = previewItems.map((item) => `
       <div class="card-item">
-        <div class="card-item-head"><strong>${S.escapeHtml(item.label)}</strong></div>
+        <div class="card-item-head">
+          <div><strong>${S.escapeHtml(item.label)}</strong></div>
+          <button class="btn btn-primary small" type="button" data-focus-target="${S.escapeHtml(item.focus)}">Edit</button>
+        </div>
         <p>${S.escapeHtml(item.value || '—')}</p>
       </div>
     `).join('');
@@ -1522,15 +1506,16 @@
       if (href.startsWith('#')) {
         scrollToHash(href);
         window.setTimeout(() => {
-          if (focus) {
-            const target = $(focus);
-            if (target) {
-              target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              if (typeof target.focus === 'function') target.focus({ preventScroll: true });
-            }
-          }
+          if (focus) focusEditor(focus);
         }, 120);
       }
+    });
+
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-focus-target]');
+      if (!button) return;
+      event.preventDefault();
+      focusEditor(button.dataset.focusTarget);
     });
     $('#amenityTitleInput')?.addEventListener('input', () => {
       if (state.iconSelectionMode === 'auto') {
@@ -1586,13 +1571,15 @@
     $('#addBlockDateBtn')?.addEventListener('click', () => {
       const date = String($('#blockDateInput').value || '').trim();
       if (!date) return alert('Choose a date first.');
-      toggleBlockDate(date);
-    });
-    $('#clearBlocksBtn')?.addEventListener('click', clearBlockedDates);
-    $('#blockDateInput')?.addEventListener('change', (event) => {
-      state.selectedCalendarDate = String(event.target.value || '').trim();
+      const type = String($('#blockDateType').value || 'blocked');
+      const note = String($('#blockDateNote').value || '').trim();
+      if (!state.blockedDates.find((item) => item.date === date)) {
+        state.blockedDates.unshift({ date, type, note });
+      }
+      S.saveBlockedDates(state.blockedDates);
       renderCalendar();
     });
+    $('#clearBlocksBtn')?.addEventListener('click', clearBlockedDates);
     $('#bookingModalSave')?.addEventListener('click', saveSelectedBookingStatus);
     $('#bookingModalCancel')?.addEventListener('click', cancelSelectedBooking);
     $('#bookingModalInvite')?.addEventListener('click', inviteSelectedBooking);

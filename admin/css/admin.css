@@ -514,6 +514,12 @@ tbody tr:hover { background: rgba(155,74,54,.035); }
   line-height: 1.6;
 }
 
+.editor-target-flash {
+  border-color: rgba(155,74,54,.38) !important;
+  box-shadow: 0 0 0 4px rgba(155,74,54,.12), var(--shadow-soft) !important;
+  background: rgba(255,248,243,.98) !important;
+}
+
 .card-actions {
   display: flex;
   flex-wrap: wrap;
@@ -856,13 +862,6 @@ label.field textarea:focus,
 .calendar-day.is-maintenance { background: rgba(61,111,141,.10); border-color: rgba(61,111,141,.20); }
 .calendar-day.is-owner { background: rgba(140,111,20,.10); border-color: rgba(140,111,20,.20); }
 .calendar-day.is-today { box-shadow: inset 0 0 0 1px rgba(155,74,54,.18); }
-.calendar-day.is-selected { box-shadow: inset 0 0 0 2px rgba(155,74,54,.45), 0 10px 22px rgba(155,74,54,.08); transform: translateY(-1px); }
-.calendar-day.is-selected .day-num { color: var(--accent); }
-.calendar-day.is-selected .day-meta { color: var(--accent); font-weight: 800; }
-.calendar-day.is-reserved .day-meta,
-.calendar-day.is-blocked .day-meta,
-.calendar-day.is-maintenance .day-meta,
-.calendar-day.is-owner .day-meta { font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
 .calendar-day.is-reserved::after {
   content: 'X';
   position: absolute;
@@ -878,26 +877,6 @@ label.field textarea:focus,
   font-size: .88rem;
   font-weight: 900;
   box-shadow: 0 8px 16px rgba(52, 40, 28, 0.08);
-}
-.calendar-activity-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 14px;
-}
-.calendar-activity-list .card-item {
-  padding: 12px 14px;
-}
-.calendar-activity-list .muted {
-  color: var(--muted);
-}
-.calendar-note {
-  margin-top: 10px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: rgba(155,74,54,.06);
-  border: 1px solid rgba(155,74,54,.12);
-  color: var(--muted);
-  line-height: 1.55;
 }
 .calendar-day button { border: 0; background: transparent; width: 100%; height: 100%; text-align: left; padding: 0; }
 
