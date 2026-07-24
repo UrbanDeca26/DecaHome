@@ -887,12 +887,15 @@ input:focus, select:focus, textarea:focus {
             <div>
               <span>Gallery Manager</span>
               <h2>Photos and videos</h2>
-              <p>Upload, feature, hide, delete, and reorder gallery media.</p>
+              <p>Feature, hide, delete, reorder, and restore gallery media.</p>
             </div>
           </div>
           <div class="grid-2">
             <div class="panel">
-              <form id="mediaForm" class="admin-form">
+              <div class="admin-empty" style="margin:0;">
+                Gallery assets are fixed. Select <strong>Edit</strong> on an existing item to change its label or type, or use <strong>Hide</strong>, <strong>Feature</strong>, <strong>Delete</strong>, and <strong>Restore defaults</strong>.
+              </div>
+              <form id="mediaForm" class="admin-form" style="margin-top:14px;">
                 <div class="form-grid">
                   <label class="field">Type
                     <select id="mediaTypeInput"><option value="image">Photo</option><option value="video">Video</option></select>
@@ -900,16 +903,9 @@ input:focus, select:focus, textarea:focus {
                   <label class="field">Label
                     <input id="mediaLabelInput" type="text" placeholder="Living room" />
                   </label>
-                  <label class="field span-2">Upload from your computer
-                    <input id="mediaFileInput" type="file" accept="image/*,video/*" />
-                    <small class="field-note">No system folder needed. Choose a photo or video from your desktop.</small>
-                  </label>
-                  <label class="field span-2">File URL (optional)
-                    <input id="mediaSrcInput" type="text" placeholder="Paste a URL only if you already have one" />
-                  </label>
                 </div>
                 <div class="section-actions" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
-                  <button class="btn btn-primary" id="mediaSubmitBtn" type="submit">Add media</button>
+                  <button class="btn btn-primary" id="mediaSubmitBtn" type="submit">Update selected media</button>
                   <button class="btn btn-secondary" id="cancelMediaEditBtn" type="button">Cancel edit</button>
                   <button class="btn btn-secondary" id="restoreMediaDefaultsBtn" type="button">Restore defaults</button>
                 </div>
@@ -1131,67 +1127,106 @@ input:focus, select:focus, textarea:focus {
           <div class="grid-2">
             <div class="panel">
               <form id="settingsForm" class="admin-form">
-                <div class="form-grid">
-                  <label class="field">Property name
-                    <input id="propertyNameInput" type="text" />
-                  </label>
-                  <label class="field">Host name
-                    <input id="hostNameInput" type="text" placeholder="Donnie" />
-                  </label>
-                  <label class="field">Hero eyebrow
-                    <input id="settingsHeroEyebrowInput" type="text" />
-                  </label>
-                  <label class="field">Hero title
-                    <input id="settingsHeroTitleInput" type="text" />
-                  </label>
-                  <label class="field span-2">Hero subtitle
-                    <textarea id="settingsHeroSubtitleInput"></textarea>
-                  </label>
-                  <label class="field">Logo URL
-                    <input id="logoUrlInput" type="text" placeholder="/assets/logo.png" />
-                  </label>
-                  <label class="field">Address
-                    <input id="addressInput" type="text" />
-                  </label>
-                  <label class="field">Building / unit
-                    <input id="buildingInput" type="text" />
-                  </label>
-                  <label class="field">Google Maps URL
-                    <input id="googleMapsUrlInput" type="text" />
-                  </label>
-                  <label class="field">Waze URL
-                    <input id="wazeUrlInput" type="text" />
-                  </label>
-                  <label class="field">Contact email
-                    <input id="contactEmailInput" type="email" />
-                  </label>
-                  <label class="field">Contact phone
-                    <input id="contactPhoneInput" type="text" />
-                  </label>
-                  <label class="field">Facebook
-                    <input id="facebookInput" type="text" />
-                  </label>
-                  <label class="field">Instagram
-                    <input id="instagramInput" type="text" />
-                  </label>
-                  <label class="field">TikTok
-                    <input id="tiktokInput" type="text" />
-                  </label>
-                  <label class="field">Website
-                    <input id="websiteInput" type="text" />
-                  </label>
-                  <label class="field">Hero image
-                    <input id="heroImageInput" type="text" />
-                  </label>
-                  <label class="field">Secondary hero image
-                    <input id="heroImage2Input" type="text" />
-                  </label>
-                  <label class="field">Day mode start
-                    <input id="themeStartDayInput" type="time" />
-                  </label>
-                  <label class="field">Night mode start
-                    <input id="themeStartNightInput" type="time" />
-                  </label>
+                <div class="settings-group">
+                  <h3>Hero & booking labels</h3>
+                  <div class="form-grid">
+                    <label class="field">Property name
+                      <input id="propertyNameInput" type="text" />
+                    </label>
+                    <label class="field">Host name
+                      <input id="hostNameInput" type="text" placeholder="Donnie" />
+                    </label>
+                    <label class="field">Hero eyebrow
+                      <input id="settingsHeroEyebrowInput" type="text" />
+                    </label>
+                    <label class="field">Hero title
+                      <input id="settingsHeroTitleInput" type="text" />
+                    </label>
+                    <label class="field span-2">Hero subtitle
+                      <textarea id="settingsHeroSubtitleInput"></textarea>
+                    </label>
+                    <label class="field">Check-in
+                      <input id="settingsCheckInInput" type="text" placeholder="1:00 PM onwards" />
+                    </label>
+                    <label class="field">Check-out
+                      <input id="settingsCheckOutInput" type="text" placeholder="11:00 AM next day" />
+                    </label>
+                    <label class="field">Security deposit
+                      <input id="settingsSecurityDepositInput" type="text" placeholder="PHP 1,000 refundable deposit / reservation fee" />
+                    </label>
+                  </div>
+                </div>
+
+                <div class="settings-group">
+                  <h3>Location & vehicle</h3>
+                  <div class="form-grid">
+                    <label class="field">Logo URL
+                      <input id="logoUrlInput" type="text" placeholder="/assets/logo.png" />
+                    </label>
+                    <label class="field">Address
+                      <input id="addressInput" type="text" />
+                    </label>
+                    <label class="field">Building / unit
+                      <input id="buildingInput" type="text" />
+                    </label>
+                    <label class="field span-2">Parking note
+                      <textarea id="settingsParkingInput" placeholder="No parking included; please advise early if parking is needed."></textarea>
+                    </label>
+                    <label class="field">Car parking rate
+                      <input id="settingsCarParkingRateInput" type="text" placeholder="PHP 400.00 per 24 hrs" />
+                    </label>
+                    <label class="field">Motorcycle parking rate
+                      <input id="settingsMotorcycleParkingRateInput" type="text" placeholder="PHP 250.00 per 24 hrs" />
+                    </label>
+                    <label class="field">Google Maps URL
+                      <input id="googleMapsUrlInput" type="text" />
+                    </label>
+                    <label class="field">Waze URL
+                      <input id="wazeUrlInput" type="text" />
+                    </label>
+                  </div>
+                </div>
+
+                <div class="settings-group">
+                  <h3>Contact & social</h3>
+                  <div class="form-grid">
+                    <label class="field">Contact email
+                      <input id="contactEmailInput" type="email" />
+                    </label>
+                    <label class="field">Contact phone
+                      <input id="contactPhoneInput" type="text" />
+                    </label>
+                    <label class="field">Facebook
+                      <input id="facebookInput" type="text" />
+                    </label>
+                    <label class="field">Instagram
+                      <input id="instagramInput" type="text" />
+                    </label>
+                    <label class="field">TikTok
+                      <input id="tiktokInput" type="text" />
+                    </label>
+                    <label class="field">Website
+                      <input id="websiteInput" type="text" />
+                    </label>
+                  </div>
+                </div>
+
+                <div class="settings-group">
+                  <h3>Hero media & theme</h3>
+                  <div class="form-grid">
+                    <label class="field">Hero image
+                      <input id="heroImageInput" type="text" />
+                    </label>
+                    <label class="field">Secondary hero image
+                      <input id="heroImage2Input" type="text" />
+                    </label>
+                    <label class="field">Day mode start
+                      <input id="themeStartDayInput" type="time" />
+                    </label>
+                    <label class="field">Night mode start
+                      <input id="themeStartNightInput" type="time" />
+                    </label>
+                  </div>
                 </div>
                 <div class="section-actions" style="margin-top:14px;">
                   <button class="btn btn-primary" type="submit">Save site settings</button>

@@ -98,65 +98,6 @@
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function readFileAsDataUrl(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function safeFileBaseName(name = 'media') {
-    return String(name || 'media')
-      .toLowerCase()
-      .replace(/[^a-z0-9._-]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '') || 'media';
-  }
-
-  async function prepareMediaUpload(file) {
-    const payload = {
-      filename: file.name || 'media',
-      contentType: file.type || 'application/octet-stream',
-      folder: 'gallery',
-    };
-    const prepared = await S.apiFetch('/api/media-upload', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-
-    if (!prepared.signedUrl || !prepared.publicUrl || !prepared.path) {
-      throw new Error('Upload service did not return a usable upload URL.');
-    }
-
-    const upload = await fetch(prepared.signedUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': file.type || 'application/octet-stream',
-      },
-      body: file,
-    });
-
-    if (!upload.ok) {
-      throw new Error(`Upload failed (${upload.status})`);
-    }
-
-    return {
-      src: prepared.publicUrl,
-      storagePath: prepared.path,
-    };
-  }
-
-  async function deleteUploadedMedia(item) {
-    if (!item || !item.storagePath) return;
-    try {
-      await S.apiFetch('/api/media-delete', {
-        method: 'POST',
-        body: JSON.stringify({ path: item.storagePath }),
-      });
-    } catch (_) {}
-  }
 
   function currentSummary() {
     const today = new Date();
@@ -285,8 +226,6 @@
   }
 
   async function restoreMediaDefaults() {
-    const uploaded = state.media.filter((item) => item && item.storagePath);
-    await Promise.all(uploaded.map((item) => deleteUploadedMedia(item)));
     state.media = S.clone(S.DEFAULT_MEDIA);
     state.editingMediaId = null;
     S.saveMedia(state.media);
@@ -408,69 +347,86 @@
       const visibleAmenities = state.amenities.filter((item) => !item.hidden).length;
       const visibleMedia = state.media.filter((item) => !item.hidden).length;
       const reviewCount = state.reviews.filter((item) => !item.hidden).length;
-      mainPageMap.innerHTML = [
+      const contentMap = [
         {
           title: 'Hero & booking',
           href: '#settings',
-          note: 'Property name, hero copy, hero image, booking labels, and contact links.',
+          focus: '#propertyNameInput',
+          note: 'Property name, hero copy, booking labels, hero image, and confirmation wording.',
           meta: `${state.settings.propertyName || state.settings.name || 'Luxury Stay'} · ${state.settings.heroTitle || 'Hero title'}`,
         },
         {
-          title: 'Location & parking',
+          title: 'Location & vehicle',
           href: '#settings',
-          note: 'Exact location, Google Maps, Waze, and vehicle notes.',
+          focus: '#addressInput',
+          note: 'Exact location, building details, parking note, and Google Maps / Waze links.',
           meta: `${state.settings.area || 'Address'} · ${state.settings.parking || 'Parking note'}`,
+        },
+        {
+          title: 'Stay details',
+          href: '#settings',
+          focus: '#settingsCheckInInput',
+          note: 'Check-in, check-out, deposit, and vehicle rates used on the public page.',
+          meta: `${state.settings.checkIn || 'Check-in'} · ${state.settings.checkOut || 'Check-out'}`,
         },
         {
           title: 'Pricing manager',
           href: '#pricing',
+          focus: '#weekdayRateInput',
           note: 'Weekday / weekend rates, included guests, extra guests, pets, and limits.',
           meta: `${S.formatCurrency(state.settings.weekdayRate || 0)} / ${S.formatCurrency(state.settings.weekendRate || 0)}`,
         },
         {
           title: 'Stay guide',
           href: '#guide',
-          note: 'Self check-in, checkout reminders, house rules, nearby places, and booking requirements.',
+          focus: '#bookingRequirementsInput',
+          note: 'Booking requirements, self check-in, checkout reminders, rules, and nearby places.',
           meta: `${state.settings.selfCheckIn.length} check-in steps`,
         },
         {
           title: 'Gallery',
           href: '#gallery',
-          note: 'Upload, edit, hide, delete, feature, and reorder photos / videos from your desktop.',
+          focus: '#mediaList',
+          note: 'Manage the fixed gallery items. Edit labels, hide, feature, delete, or reorder.',
           meta: `${visibleMedia} visible media items`,
         },
         {
           title: 'Amenities',
           href: '#amenities',
+          focus: '#amenityTitleInput',
           note: 'Add, edit, delete, restore, hide, feature, and reorder amenities.',
           meta: `${visibleAmenities} visible amenities`,
         },
         {
           title: 'Reviews',
           href: '#reviews',
+          focus: '#reviewList',
           note: 'Feature verified guest reviews and manage review invitations.',
           meta: `${reviewCount} visible reviews`,
         },
         {
           title: 'Luna AI',
           href: '#luna',
+          focus: '#lunaDescriptionInput',
           note: 'Property description, FAQs, house rules, parking, contact info, and recommendations.',
           meta: `${(state.settings.lunaFaqs || []).length} FAQs configured`,
         },
         {
           title: 'Site settings',
           href: '#settings',
-          note: 'Logo, social links, hero images, and automatic day / night mode.',
+          focus: '#propertyNameInput',
+          note: 'Logo, contact info, socials, hero images, and automatic day / night mode.',
           meta: `${state.settings.themeStartDay || '06:00'} / ${state.settings.themeStartNight || '18:00'}`,
         },
-      ].map((item) => `
-        <div class="card-item">
+      ];
+      mainPageMap.innerHTML = contentMap.map((item) => `
+        <div class="card-item main-map-card">
           <div class="card-item-head">
             <div>
               <strong>${S.escapeHtml(item.title)}</strong>
               <span>${S.escapeHtml(item.meta)}</span>
             </div>
-            <a class="btn btn-secondary small" href="${S.escapeHtml(item.href)}">Edit</a>
+            <button class="btn btn-secondary small" type="button" data-map-href="${S.escapeHtml(item.href)}" data-map-focus="${S.escapeHtml(item.focus || '')}">Edit</button>
           </div>
           <p>${S.escapeHtml(item.note)}</p>
         </div>
@@ -819,19 +775,18 @@
     const list = $('#mediaList');
     const submitBtn = $('#mediaSubmitBtn');
     const cancelBtn = $('#cancelMediaEditBtn');
-    const fileInput = $('#mediaFileInput');
-    const srcInput = $('#mediaSrcInput');
     if (!list) return;
 
     const editing = state.media.find((item) => item.id === state.editingMediaId) || null;
-    if (submitBtn) submitBtn.textContent = editing ? 'Update media' : 'Add media';
+    if (submitBtn) {
+      submitBtn.textContent = editing ? 'Update selected media' : 'Select an item to edit';
+      submitBtn.disabled = !editing;
+    }
     if (cancelBtn) cancelBtn.hidden = !editing;
 
     if (editing) {
       $('#mediaTypeInput').value = editing.type || 'image';
       $('#mediaLabelInput').value = editing.label || editing.alt || '';
-      if (fileInput) fileInput.value = '';
-      if (srcInput) srcInput.value = editing.storagePath ? '' : (editing.src || '');
     }
 
     if (!state.media.length) {
@@ -844,7 +799,7 @@
         <div class="card-item-head" style="margin-top:10px;">
           <div>
             <strong>${S.escapeHtml(item.label || item.alt || 'Media')}</strong>
-            <span>${item.type === 'video' ? 'Video' : 'Photo'}${item.storagePath ? ' · Uploaded' : ''}</span>
+            <span>${item.type === 'video' ? 'Video' : 'Photo'}${item.storagePath ? ' · Stored' : ''}</span>
           </div>
           <span class="badge ${item.featured ? 'success' : 'info'}">${item.featured ? 'Featured' : 'Normal'}</span>
         </div>
@@ -880,8 +835,6 @@
           state.media[idx].hidden = !state.media[idx].hidden;
         } else if (action === 'delete') {
           if (!window.confirm('Delete this media item?')) return;
-          const item = state.media[idx];
-          await deleteUploadedMedia(item);
           state.media = state.media.filter((mediaItem) => mediaItem.id !== id);
         }
         S.saveMedia(state.media);
@@ -1079,6 +1032,12 @@
     $('#settingsHeroEyebrowInput').value = settings.heroEyebrow || '';
     $('#settingsHeroTitleInput').value = settings.heroTitle || '';
     $('#settingsHeroSubtitleInput').value = settings.heroSubtitle || '';
+    $('#settingsCheckInInput').value = settings.checkIn || '1:00 PM onwards';
+    $('#settingsCheckOutInput').value = settings.checkOut || '11:00 AM next day';
+    $('#settingsSecurityDepositInput').value = settings.securityDeposit || 'PHP 1,000 refundable deposit / reservation fee';
+    $('#settingsParkingInput').value = settings.parking || 'No parking included; please advise early if parking is needed.';
+    $('#settingsCarParkingRateInput').value = settings.parkingRates?.car || 'PHP 400.00 per 24 hrs';
+    $('#settingsMotorcycleParkingRateInput').value = settings.parkingRates?.motorcycle || 'PHP 250.00 per 24 hrs';
     $('#logoUrlInput').value = settings.logoUrl || '';
     $('#addressInput').value = settings.area || '';
     $('#buildingInput').value = settings.building || '';
@@ -1101,8 +1060,10 @@
       { label: 'Hero copy', value: [settings.heroEyebrow, settings.heroTitle].filter(Boolean).join(' — ') || '—' },
       { label: 'Hero subtitle', value: settings.heroSubtitle || '—' },
       { label: 'Location & vehicle', value: `${settings.area || '—'} · ${settings.building || '—'} · ${settings.parking || 'Parking note'}` },
+      { label: 'Parking rates', value: `${settings.parkingRates?.car || '—'} · ${settings.parkingRates?.motorcycle || '—'}` },
       { label: 'Google Maps / Waze', value: [settings.googleMapsUrl, settings.wazeUrl].filter(Boolean).join(' · ') || '—' },
       { label: 'Check-in / checkout', value: `${settings.checkIn || '—'} · ${settings.checkOut || '—'}` },
+      { label: 'Security deposit', value: settings.securityDeposit || '—' },
       { label: 'Contact', value: `${settings.contactEmail || '—'} · ${settings.contactPhone || '—'}` },
       { label: 'Theme', value: `${settings.themeStartDay || '06:00'} / ${settings.themeStartNight || '18:00'}` },
       { label: 'Socials', value: socialSummary },
@@ -1291,6 +1252,14 @@
     state.settings.heroEyebrow = read('#settingsHeroEyebrowInput', state.settings.heroEyebrow || '');
     state.settings.heroTitle = read('#settingsHeroTitleInput', state.settings.heroTitle || '');
     state.settings.heroSubtitle = read('#settingsHeroSubtitleInput', state.settings.heroSubtitle || '');
+    state.settings.checkIn = read('#settingsCheckInInput', state.settings.checkIn || '1:00 PM onwards') || '1:00 PM onwards';
+    state.settings.checkOut = read('#settingsCheckOutInput', state.settings.checkOut || '11:00 AM next day') || '11:00 AM next day';
+    state.settings.securityDeposit = read('#settingsSecurityDepositInput', state.settings.securityDeposit || 'PHP 1,000 refundable deposit / reservation fee');
+    state.settings.parking = read('#settingsParkingInput', state.settings.parking || 'No parking included; please advise early if parking is needed.');
+    state.settings.parkingRates = {
+      car: read('#settingsCarParkingRateInput', state.settings.parkingRates?.car || 'PHP 400.00 per 24 hrs'),
+      motorcycle: read('#settingsMotorcycleParkingRateInput', state.settings.parkingRates?.motorcycle || 'PHP 250.00 per 24 hrs'),
+    };
     state.settings.logoUrl = read('#logoUrlInput', state.settings.logoUrl || '');
     state.settings.area = read('#addressInput', state.settings.area || '');
     state.settings.building = read('#buildingInput', state.settings.building || '');
@@ -1316,71 +1285,25 @@
 
   async function saveMediaFromForm(e) {
     e.preventDefault();
-    const type = String($('#mediaTypeInput').value || 'image');
-    const fileInput = $('#mediaFileInput');
-    const file = fileInput?.files?.[0] || null;
-    const src = String($('#mediaSrcInput').value || '').trim();
-    const label = String($('#mediaLabelInput').value || '').trim();
     const editing = state.media.find((item) => item.id === state.editingMediaId) || null;
-
-    let mediaSrc = src || editing?.src || '';
-    let poster = editing?.poster || undefined;
-    let storagePath = editing?.storagePath || undefined;
-
-    if (file) {
-      const maxBytes = 40 * 1024 * 1024;
-      if (file.size > maxBytes) {
-        const ok = window.confirm('This file is large. Uploading may take a moment. Continue?');
-        if (!ok) return;
-      }
-      try {
-        const uploaded = await prepareMediaUpload(file);
-        mediaSrc = uploaded.src;
-        storagePath = uploaded.storagePath;
-        poster = type === 'video' ? editing?.poster || './assets/9.jpg' : undefined;
-      } catch (uploadErr) {
-        const fallback = await readFileAsDataUrl(file);
-        mediaSrc = fallback;
-        storagePath = undefined;
-        poster = type === 'video' ? editing?.poster || './assets/9.jpg' : undefined;
-      }
-    }
-
-    if (!mediaSrc) {
-      alert('Choose a file or paste a URL.');
+    if (!editing) {
+      alert('Select an existing media item and click Edit. Gallery assets are fixed in this build.');
       return;
     }
 
-    if (editing && !file && src && src !== editing.src) {
-      storagePath = undefined;
-    }
-
-    const altText = label || (file ? file.name : mediaSrc);
+    const type = String($('#mediaTypeInput').value || editing.type || 'image');
+    const label = String($('#mediaLabelInput').value || '').trim();
     const nextItem = {
-      id: editing?.id || S.generateId('media'),
+      ...editing,
       type,
-      src: mediaSrc,
-      alt: altText,
-      label: altText,
-      featured: editing ? !!editing.featured : false,
-      hidden: editing ? !!editing.hidden : false,
-      poster,
-      storagePath,
+      label: label || editing.label || editing.alt || 'Media',
+      alt: label || editing.alt || editing.label || 'Media',
     };
 
-    if (editing) {
-      state.media = state.media.map((item) => item.id === editing.id ? { ...item, ...nextItem } : item);
-      if (editing.storagePath && editing.storagePath !== storagePath) {
-        await deleteUploadedMedia(editing);
-      }
-    } else {
-      state.media.unshift(nextItem);
-    }
-
+    state.media = state.media.map((item) => item.id === editing.id ? { ...item, ...nextItem } : item);
     S.saveMedia(state.media);
     state.editingMediaId = null;
-    $('#mediaForm').reset();
-    $('#mediaTypeInput').value = 'image';
+    $('#mediaForm')?.reset();
     renderMedia();
     broadcastUpdate('media', ['media']);
   }
@@ -1546,6 +1469,24 @@
     });
     $('#restoreMediaDefaultsBtn')?.addEventListener('click', restoreMediaDefaults);
     $('#restoreAmenityDefaultsBtn')?.addEventListener('click', restoreAmenitiesDefaults);
+    $('#mainPageMap')?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-map-href]');
+      if (!button) return;
+      const href = button.dataset.mapHref || '#settings';
+      const focus = button.dataset.mapFocus || '';
+      if (href.startsWith('#')) {
+        scrollToHash(href);
+        window.setTimeout(() => {
+          if (focus) {
+            const target = $(focus);
+            if (target) {
+              target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              if (typeof target.focus === 'function') target.focus({ preventScroll: true });
+            }
+          }
+        }, 120);
+      }
+    });
     $('#amenityTitleInput')?.addEventListener('input', () => {
       if (state.iconSelectionMode === 'auto') {
         $('#amenityIconInput').value = S.guessAmenityIconKey($('#amenityTitleInput').value, $('#amenityCategoryInput').value, $('#amenityDescInput').value);

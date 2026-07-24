@@ -583,6 +583,32 @@ label.field textarea:focus,
   box-shadow: 0 0 0 4px rgba(155,74,54,.10);
 }
 
+.settings-group {
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(34,26,18,.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.68);
+}
+
+.settings-group + .settings-group {
+  margin-top: 14px;
+}
+
+.settings-group h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  letter-spacing: -.02em;
+}
+
+.main-map-card p {
+  margin: 0;
+}
+
+.main-map-card .btn {
+  min-width: 86px;
+}
+
 .amenity-icon-field {
   grid-column: 1 / -1;
 }

@@ -344,15 +344,6 @@
     }
   }
 
-  function readFileAsDataUrl(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
-      reader.readAsDataURL(file);
-    });
-  }
-
 
   function textareaToList(value) {
     return String(value || '')
@@ -2408,14 +2399,17 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     const list = $('#ownerMediaList');
     if (!list) return;
     if (!state.admin) {
-      list.innerHTML = '<div class="owner-empty">Sign in to upload or remove photos and videos.</div>';
+      list.innerHTML = '<div class="owner-empty">Sign in to manage gallery media.</div>';
       return;
     }
 
     const items = state.media.slice();
     list.innerHTML = `
-      <form class="owner-form" id="ownerMediaForm">
-        <h4>Add media</h4>
+      <div class="owner-empty" style="margin-bottom:14px;">
+        Gallery files are fixed in the source project. In admin, you can feature, hide, delete, reorder, and restore existing gallery items, but adding new photos or videos is disabled.
+      </div>
+      <form class="owner-form" id="ownerMediaForm" style="margin-bottom:14px;">
+        <h4>Edit selected media</h4>
         <div class="owner-row">
           <label>Type
             <select id="ownerMediaType">
@@ -2425,10 +2419,8 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
           </label>
           <label>Label <input id="ownerMediaLabel" type="text" placeholder="Living room" /></label>
         </div>
-        <label>File <input id="ownerMediaFile" type="file" accept="image/*,video/*" /></label>
-        <label>Poster image (for videos) <input id="ownerMediaPoster" type="text" placeholder="Optional poster URL or leave blank" /></label>
-        <button class="btn btn-primary full" type="submit">Upload media</button>
-        <p class="muted">Large videos should be compressed before uploading.</p>
+        <button class="btn btn-primary full" type="submit">Update selected media</button>
+        <button class="btn btn-secondary full" id="cancelMediaEditBtn" type="button" style="margin-top:8px;">Cancel edit</button>
       </form>
 
       <div class="owner-list media-list">
@@ -2454,39 +2446,23 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
 
     $('#ownerMediaForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const type = String($('#ownerMediaType')?.value || 'image');
-      const fileInput = $('#ownerMediaFile');
-      const label = String($('#ownerMediaLabel')?.value || '').trim();
-      const poster = String($('#ownerMediaPoster')?.value || '').trim();
-      const file = fileInput?.files?.[0];
-      if (!file) {
-        alert('Choose a photo or video file first.');
+      const targetId = state.editingMediaId;
+      const item = state.media.find((media) => media.id === targetId) || null;
+      if (!item) {
+        alert('Select an existing media item and click Edit. New gallery uploads are disabled.');
         return;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        const go = window.confirm('This file is larger than 10 MB. It may be slow in the browser. Continue?');
-        if (!go) return;
-      }
-      const dataUrl = await readFileAsDataUrl(file);
-      const item = {
-        id: `m-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        type: type === 'video' ? 'video' : 'image',
-        src: dataUrl,
-        poster: type === 'video' ? (poster || './assets/9.jpg') : undefined,
-        alt: label || file.name,
-        label: label || file.name,
-        featured: false,
-        hidden: false,
-      };
-      if (item.type === 'image') delete item.poster;
-      state.media.unshift(item);
+      const type = String($('#ownerMediaType')?.value || item.type || 'image');
+      const label = String($('#ownerMediaLabel')?.value || '').trim();
+      Object.assign(item, {
+        type,
+        label: label || item.label || item.alt || 'Media',
+        alt: label || item.alt || item.label || 'Media',
+      });
       persistMedia();
       renderGallery();
       renderVideos();
       renderOwnerMedia();
-      fileInput.value = '';
-      $('#ownerMediaLabel').value = '';
-      $('#ownerMediaPoster').value = '';
     });
 
     $$('#ownerMediaList [data-act]').forEach((button) => {
