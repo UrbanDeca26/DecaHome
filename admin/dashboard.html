@@ -743,6 +743,15 @@ input:focus, select:focus, textarea:focus {
               <div class="card-stack" id="dashboardSnapshot"></div>
             </div>
           </div>
+          <div class="panel" style="margin-top:14px;">
+            <div class="section-head" style="align-items:center;">
+              <div>
+                <h3 style="margin:0;">Main page content map</h3>
+                <p class="muted" style="margin:6px 0 0;">Every guest-facing section is editable here. Use the edit buttons to jump straight to the correct manager.</p>
+              </div>
+            </div>
+            <div class="card-list" id="mainPageMap"></div>
+          </div>
         </section>
 
         <section class="admin-section" id="bookings">
@@ -891,15 +900,17 @@ input:focus, select:focus, textarea:focus {
                   <label class="field">Label
                     <input id="mediaLabelInput" type="text" placeholder="Living room" />
                   </label>
-                  <label class="field span-2">Upload photo or video
+                  <label class="field span-2">Upload from your computer
                     <input id="mediaFileInput" type="file" accept="image/*,video/*" />
+                    <small class="field-note">No system folder needed. Choose a photo or video from your desktop.</small>
                   </label>
                   <label class="field span-2">File URL (optional)
-                    <input id="mediaSrcInput" type="text" placeholder="Paste a URL if you are not uploading a file" />
+                    <input id="mediaSrcInput" type="text" placeholder="Paste a URL only if you already have one" />
                   </label>
                 </div>
                 <div class="section-actions" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
-                  <button class="btn btn-primary" type="submit">Add media</button>
+                  <button class="btn btn-primary" id="mediaSubmitBtn" type="submit">Add media</button>
+                  <button class="btn btn-secondary" id="cancelMediaEditBtn" type="button">Cancel edit</button>
                   <button class="btn btn-secondary" id="restoreMediaDefaultsBtn" type="button">Restore defaults</button>
                 </div>
               </form>
@@ -936,8 +947,33 @@ input:focus, select:focus, textarea:focus {
                       <option value="Other">Other</option>
                     </select>
                   </label>
-                  <label class="field">Icon
-                    <select id="amenityIconInput"></select>
+                  <label class="field span-2 amenity-icon-field">Icon
+                    <input id="amenityIconInput" type="hidden" value="default" />
+                    <div class="icon-picker-shell">
+                      <div class="icon-picker-head">
+                        <div class="icon-picker-preview" id="amenityIconPreview" aria-hidden="true"></div>
+                        <div class="icon-picker-copy">
+                          <strong id="amenityIconName">Default</strong>
+                          <p id="amenityIconNote">We suggest the best icon based on the amenity name and category.</p>
+                        </div>
+                        <div class="icon-picker-actions">
+                          <button class="btn btn-secondary small" id="amenityIconAutoBtn" type="button">Auto match</button>
+                          <button class="btn btn-secondary small" id="amenityIconDefaultBtn" type="button">Default</button>
+                          <button class="btn btn-secondary small" id="amenityIconBrowseBtn" type="button">Browse icons</button>
+                        </div>
+                      </div>
+                      <div class="field icon-search-field">Search icons
+                        <input id="amenityIconSearch" type="search" placeholder="Search wheel, parking, pet, bed, coffee..." />
+                      </div>
+                      <div class="icon-picker-group">
+                        <div class="icon-picker-label">Suggested</div>
+                        <div class="icon-picker-suggestions" id="amenityIconSuggestions"></div>
+                      </div>
+                      <div class="icon-picker-group hidden" id="amenityIconLibraryWrap">
+                        <div class="icon-picker-label">Custom library</div>
+                        <div class="icon-picker-library" id="amenityIconLibrary"></div>
+                      </div>
+                    </div>
                   </label>
                   <label class="field span-2">Description
                     <textarea id="amenityDescInput" placeholder="Describe the amenity"></textarea>
@@ -984,6 +1020,7 @@ input:focus, select:focus, textarea:focus {
                 </label>
                 <div class="section-actions" style="margin-top:14px;">
                   <button class="btn btn-primary" type="submit">Save guide</button>
+                  <button class="btn btn-secondary" id="restoreGuideDefaultsBtn" type="button">Restore defaults</button>
                 </div>
               </form>
             </div>
@@ -1158,6 +1195,7 @@ input:focus, select:focus, textarea:focus {
                 </div>
                 <div class="section-actions" style="margin-top:14px;">
                   <button class="btn btn-primary" type="submit">Save site settings</button>
+                  <button class="btn btn-secondary" id="restoreSettingsDefaultsBtn" type="button">Restore defaults</button>
                 </div>
               </form>
             </div>

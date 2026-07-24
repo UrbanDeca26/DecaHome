@@ -136,6 +136,10 @@
     closet: '<svg viewBox="0 0 24 24" fill="none"><path d="M6 4h12v16H6zM12 4v16M9 8h0M15 8h0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     iron: '<svg viewBox="0 0 24 24" fill="none"><path d="M6 14h10l2 4H8a2 2 0 0 1-2-2v-2zM9 10h5l2 4H9z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     dryer: '<svg viewBox="0 0 24 24" fill="none"><path d="M8 4h8v16H8zM10 8h4M10 12h4M10 16h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    car: '<svg viewBox="0 0 24 24" fill="none"><path d="M5 14l1.2-4.2A3 3 0 0 1 9.1 8h5.8a3 3 0 0 1 2.9 1.8L19 14M6 14h12v4H6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="18" r="1.2" fill="currentColor"/><circle cx="16" cy="18" r="1.2" fill="currentColor"/></svg>',
+    wheel: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.1" fill="currentColor"/><path d="M12 5v3M12 16v3M5 12h3M16 12h3M7.5 7.5l2.1 2.1M14.4 14.4l2.1 2.1M16.5 7.5l-2.1 2.1M9.6 14.4l-2.1 2.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+    bed: '<svg viewBox="0 0 24 24" fill="none"><path d="M5 12V7.5A1.5 1.5 0 0 1 6.5 6h11A1.5 1.5 0 0 1 19 7.5V12M5 12h14M7 12v4M17 12v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 9h3.5a1.5 1.5 0 0 1 0 3H8z" fill="currentColor" opacity=".18"/></svg>',
+    pet: '<svg viewBox="0 0 24 24" fill="none"><circle cx="7" cy="9" r="1.4" fill="currentColor"/><circle cx="11" cy="6.8" r="1.4" fill="currentColor"/><circle cx="13" cy="6.8" r="1.4" fill="currentColor"/><circle cx="17" cy="9" r="1.4" fill="currentColor"/><path d="M8.2 14.2c0-1.8 1.5-3.3 3.3-3.3s3.3 1.5 3.3 3.3c0 1.7-1.5 3.4-3.3 3.4s-3.3-1.7-3.3-3.4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
     default: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 12h16M12 4v16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
   };
 
@@ -1125,8 +1129,47 @@
       .sort((a, b) => Number(b.featured) - Number(a.featured) || String(a.category || '').localeCompare(String(b.category || '')) || String(a.title || '').localeCompare(String(b.title || '')));
   }
 
-  function amenityIconMarkup(key) {
-    return ICONS[key] || ICONS.default;
+  function resolveAmenityIconKey(key, title = '', category = '') {
+    const normalized = String(key || '').trim().toLowerCase();
+    if (normalized && ICONS[normalized]) return normalized;
+    const haystack = `${title} ${category}`.toLowerCase();
+    const rules = [
+      { key: 'wifi', terms: ['wifi', 'wi-fi', 'internet', 'network', 'router'] },
+      { key: 'tv', terms: ['tv', 'television', 'smart tv', 'google tv', 'streaming'] },
+      { key: 'key', terms: ['key', 'check-in', 'access', 'lock', 'tap card'] },
+      { key: 'ac', terms: ['ac', 'aircon', 'air conditioner', 'air-conditioned', 'cooling'] },
+      { key: 'kitchen', terms: ['kitchen', 'cook', 'cooking', 'stove', 'induction'] },
+      { key: 'fridge', terms: ['fridge', 'refrigerator', 'ref', 'cold storage'] },
+      { key: 'microwave', terms: ['microwave', 'oven', 'heating'] },
+      { key: 'washer', terms: ['washer', 'washing machine', 'laundry', 'dry'] },
+      { key: 'shower', terms: ['shower', 'bath', 'bathroom', 'toilet', 'washroom'] },
+      { key: 'workspace', terms: ['workspace', 'desk', 'office', 'work', 'study'] },
+      { key: 'security', terms: ['security', 'safe', 'shield', 'guard', '24/7'] },
+      { key: 'karaoke', terms: ['karaoke', 'sing', 'microphone', 'mic'] },
+      { key: 'projector', terms: ['projector', 'screen', 'movie', 'cinema'] },
+      { key: 'games', terms: ['game', 'board game', 'cards', 'play'] },
+      { key: 'dining', terms: ['dining', 'table', 'meal', 'eating'] },
+      { key: 'store', terms: ['store', 'shop', 'mart', 'convenience', 'atm'] },
+      { key: 'basketball', terms: ['basketball', 'court', 'sport'] },
+      { key: 'park', terms: ['park', 'playground', 'garden', 'lounge'] },
+      { key: 'coffee', terms: ['coffee', 'cafe', 'café', 'tea'] },
+      { key: 'closet', terms: ['closet', 'wardrobe', 'cabinet', 'storage'] },
+      { key: 'iron', terms: ['iron', 'press', 'pressing'] },
+      { key: 'dryer', terms: ['dryer', 'drying'] },
+      { key: 'car', terms: ['car', 'parking', 'vehicle', 'garage', 'lot'] },
+      { key: 'wheel', terms: ['wheel', 'wheelchair', 'tire', 'tyre', 'garage'] },
+      { key: 'bed', terms: ['bed', 'sleep', 'sleeping', 'bedroom', 'rest'] },
+      { key: 'pet', terms: ['pet', 'paw', 'dog', 'cat', 'animal'] },
+    ];
+    for (const rule of rules) {
+      if (rule.terms.some((term) => haystack.includes(term))) return rule.key;
+    }
+    return 'default';
+  }
+
+  function amenityIconMarkup(key, title = '', category = '') {
+    const iconKey = resolveAmenityIconKey(key, title, category);
+    return ICONS[iconKey] || ICONS.default;
   }
 
   function featuredImageItems() {
@@ -1198,7 +1241,7 @@
     const previewItems = (preferred.length >= 4 ? preferred : amenities).slice(0, 4);
     const cardMarkup = (item, cls = 'amenity-card') => `
       <article class="${cls}">
-        <div class="amenity-icon" aria-hidden="true">${amenityIconMarkup(item.icon)}</div>
+        <div class="amenity-icon" aria-hidden="true">${amenityIconMarkup(item.icon, item.title, item.category)}</div>
         <div class="amenity-copy">
           <span class="amenity-tag">${escapeHtml(item.category || 'Amenity')}</span>
           <h3>${escapeHtml(item.title || 'Amenity')}</h3>

@@ -189,6 +189,10 @@
     closet: '<svg viewBox="0 0 24 24" fill="none"><path d="M6 4h12v16H6zM12 4v16M9 8h0M15 8h0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     iron: '<svg viewBox="0 0 24 24" fill="none"><path d="M6 14h10l2 4H8a2 2 0 0 1-2-2v-2zM9 10h5l2 4H9z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     dryer: '<svg viewBox="0 0 24 24" fill="none"><path d="M8 4h8v16H8zM10 8h4M10 12h4M10 16h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    car: '<svg viewBox="0 0 24 24" fill="none"><path d="M5 14l1.2-4.2A3 3 0 0 1 9.1 8h5.8a3 3 0 0 1 2.9 1.8L19 14M6 14h12v4H6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="18" r="1.2" fill="currentColor"/><circle cx="16" cy="18" r="1.2" fill="currentColor"/></svg>',
+    wheel: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.1" fill="currentColor"/><path d="M12 5v3M12 16v3M5 12h3M16 12h3M7.5 7.5l2.1 2.1M14.4 14.4l2.1 2.1M16.5 7.5l-2.1 2.1M9.6 14.4l-2.1 2.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+    bed: '<svg viewBox="0 0 24 24" fill="none"><path d="M5 12V7.5A1.5 1.5 0 0 1 6.5 6h11A1.5 1.5 0 0 1 19 7.5V12M5 12h14M7 12v4M17 12v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 9h3.5a1.5 1.5 0 0 1 0 3H8z" fill="currentColor" opacity=".18"/></svg>',
+    pet: '<svg viewBox="0 0 24 24" fill="none"><circle cx="7" cy="9" r="1.4" fill="currentColor"/><circle cx="11" cy="6.8" r="1.4" fill="currentColor"/><circle cx="13" cy="6.8" r="1.4" fill="currentColor"/><circle cx="17" cy="9" r="1.4" fill="currentColor"/><path d="M8.2 14.2c0-1.8 1.5-3.3 3.3-3.3s3.3 1.5 3.3 3.3c0 1.7-1.5 3.4-3.3 3.4s-3.3-1.7-3.3-3.4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
     default: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 12h16M12 4v16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
   };
 
@@ -435,8 +439,71 @@
     return out;
   }
 
+  const AMENITY_ICON_LIBRARY = [
+    { key: 'wifi', label: 'Wi-Fi', terms: ['wifi', 'wi-fi', 'internet', 'network', 'router'] },
+    { key: 'tv', label: 'TV', terms: ['tv', 'television', 'smart tv', 'google tv', 'streaming'] },
+    { key: 'key', label: 'Key', terms: ['key', 'check-in', 'access', 'lock', 'tap card'] },
+    { key: 'ac', label: 'Aircon', terms: ['ac', 'aircon', 'air conditioner', 'air-conditioned', 'cooling'] },
+    { key: 'kitchen', label: 'Kitchen', terms: ['kitchen', 'cook', 'cooking', 'stove', 'induction'] },
+    { key: 'fridge', label: 'Fridge', terms: ['fridge', 'refrigerator', 'ref', 'cold storage'] },
+    { key: 'microwave', label: 'Microwave', terms: ['microwave', 'oven', 'heating'] },
+    { key: 'washer', label: 'Washer', terms: ['washer', 'washing machine', 'laundry', 'dry'] },
+    { key: 'shower', label: 'Shower', terms: ['shower', 'bath', 'bathroom', 'toilet', 'washroom'] },
+    { key: 'workspace', label: 'Workspace', terms: ['workspace', 'desk', 'office', 'work', 'study'] },
+    { key: 'security', label: 'Security', terms: ['security', 'safe', 'shield', 'guard', '24/7'] },
+    { key: 'karaoke', label: 'Karaoke', terms: ['karaoke', 'sing', 'microphone', 'mic'] },
+    { key: 'projector', label: 'Projector', terms: ['projector', 'screen', 'movie', 'cinema'] },
+    { key: 'games', label: 'Games', terms: ['game', 'board game', 'cards', 'play'] },
+    { key: 'dining', label: 'Dining', terms: ['dining', 'table', 'meal', 'eating'] },
+    { key: 'store', label: 'Store', terms: ['store', 'shop', 'mart', 'convenience', 'atm'] },
+    { key: 'basketball', label: 'Basketball', terms: ['basketball', 'court', 'sport'] },
+    { key: 'park', label: 'Park', terms: ['park', 'playground', 'garden', 'lounge'] },
+    { key: 'coffee', label: 'Coffee', terms: ['coffee', 'cafe', 'café', 'tea'] },
+    { key: 'closet', label: 'Closet', terms: ['closet', 'wardrobe', 'cabinet', 'storage'] },
+    { key: 'iron', label: 'Iron', terms: ['iron', 'press', 'pressing'] },
+    { key: 'dryer', label: 'Dryer', terms: ['dryer', 'drying'] },
+    { key: 'car', label: 'Car', terms: ['car', 'parking', 'vehicle', 'garage', 'lot'] },
+    { key: 'wheel', label: 'Wheel', terms: ['wheel', 'wheelchair', 'tire', 'tyre', 'garage'] },
+    { key: 'bed', label: 'Bed', terms: ['bed', 'sleep', 'sleeping', 'bedroom', 'rest'] },
+    { key: 'pet', label: 'Pet', terms: ['pet', 'paw', 'dog', 'cat', 'animal'] },
+    { key: 'default', label: 'Default', terms: ['default'] },
+  ];
+
   function iconMarkup(key) {
     return ICONS[key] || ICONS.default;
+  }
+
+  function getAmenityIconEntry(key) {
+    return AMENITY_ICON_LIBRARY.find((item) => item.key === key) || AMENITY_ICON_LIBRARY.find((item) => item.key === 'default');
+  }
+
+  function iconLabel(key) {
+    return getAmenityIconEntry(key).label;
+  }
+
+  function iconLibrary() {
+    return AMENITY_ICON_LIBRARY.map((item) => ({
+      ...item,
+      svg: iconMarkup(item.key),
+    }));
+  }
+
+  function guessAmenityIconKey(title = '', category = '', description = '') {
+    const haystack = `${title} ${category} ${description}`.toLowerCase();
+    const scored = AMENITY_ICON_LIBRARY
+      .filter((item) => item.key !== 'default')
+      .map((item) => ({
+        key: item.key,
+        score: item.terms.reduce((score, term) => score + (haystack.includes(term.toLowerCase()) ? 1 : 0), 0),
+      }))
+      .sort((a, b) => b.score - a.score);
+    return scored[0] && scored[0].score > 0 ? scored[0].key : 'default';
+  }
+
+  function resolveAmenityIconKey(value, title = '', category = '', description = '') {
+    const key = String(value || '').trim().toLowerCase();
+    if (key && AMENITY_ICON_LIBRARY.some((item) => item.key === key)) return key;
+    return guessAmenityIconKey(title, category, description);
   }
 
   window.LuxuryAdminStore = {
@@ -467,6 +534,10 @@
     monthTitle,
     generateId,
     iconMarkup,
+    iconLabel,
+    iconLibrary,
+    guessAmenityIconKey,
+    resolveAmenityIconKey,
     escapeHtml,
     clone,
     getCookies,

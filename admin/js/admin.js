@@ -4,7 +4,9 @@
   const S = window.LuxuryAdminStore;
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-  const ICON_KEYS = ['wifi','tv','key','ac','kitchen','fridge','microwave','washer','shower','workspace','security','karaoke','projector','games','dining','store','basketball','park','coffee','closet','iron','dryer'];
+  const ICON_LIBRARY = S.iconLibrary();
+  const ICON_LIBRARY_BY_KEY = new Map(ICON_LIBRARY.map((item) => [item.key, item]));
+  const DEFAULT_ICON_KEY = 'default';
 
   const state = {
     settings: S.loadSettings(),
@@ -19,6 +21,9 @@
       return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
     })(),
     editingAmenityId: null,
+    editingMediaId: null,
+    iconLibraryOpen: false,
+    iconSelectionMode: 'auto',
     selectedBooking: null,
     developerHealth: {
       auth: 'Unknown',
@@ -100,6 +105,57 @@
       reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
       reader.readAsDataURL(file);
     });
+  }
+
+  function safeFileBaseName(name = 'media') {
+    return String(name || 'media')
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || 'media';
+  }
+
+  async function prepareMediaUpload(file) {
+    const payload = {
+      filename: file.name || 'media',
+      contentType: file.type || 'application/octet-stream',
+      folder: 'gallery',
+    };
+    const prepared = await S.apiFetch('/api/media-upload', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    if (!prepared.signedUrl || !prepared.publicUrl || !prepared.path) {
+      throw new Error('Upload service did not return a usable upload URL.');
+    }
+
+    const upload = await fetch(prepared.signedUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': file.type || 'application/octet-stream',
+      },
+      body: file,
+    });
+
+    if (!upload.ok) {
+      throw new Error(`Upload failed (${upload.status})`);
+    }
+
+    return {
+      src: prepared.publicUrl,
+      storagePath: prepared.path,
+    };
+  }
+
+  async function deleteUploadedMedia(item) {
+    if (!item || !item.storagePath) return;
+    try {
+      await S.apiFetch('/api/media-delete', {
+        method: 'POST',
+        body: JSON.stringify({ path: item.storagePath }),
+      });
+    } catch (_) {}
   }
 
   function currentSummary() {
@@ -228,8 +284,11 @@
     broadcastUpdate('pricing', ['weekdayRate', 'weekendRate', 'includedGuests', 'extraGuestFee', 'petFee', 'maxGuests', 'maxPets']);
   }
 
-  function restoreMediaDefaults() {
+  async function restoreMediaDefaults() {
+    const uploaded = state.media.filter((item) => item && item.storagePath);
+    await Promise.all(uploaded.map((item) => deleteUploadedMedia(item)));
     state.media = S.clone(S.DEFAULT_MEDIA);
+    state.editingMediaId = null;
     S.saveMedia(state.media);
     renderMedia();
     broadcastUpdate('media', ['media']);
@@ -237,9 +296,61 @@
 
   function restoreAmenitiesDefaults() {
     state.amenities = S.clone(S.DEFAULT_AMENITIES);
+    state.editingAmenityId = null;
+    state.iconLibraryOpen = false;
     S.saveAmenities(state.amenities);
     renderAmenities();
     broadcastUpdate('amenities', ['amenities']);
+  }
+
+  function restoreGuideDefaults() {
+    const defaults = S.clone(S.DEFAULT_SETTINGS);
+    state.settings.bookingRequirements = S.clone(defaults.bookingRequirements);
+    state.settings.selfCheckIn = S.clone(defaults.selfCheckIn);
+    state.settings.checkout = S.clone(defaults.checkout);
+    state.settings.houseRules = S.clone(defaults.houseRules);
+    state.settings.nearby = S.clone(defaults.nearby);
+    S.saveSettings(state.settings);
+    renderGuide();
+    renderSettings();
+    renderDashboard();
+    broadcastUpdate('guide', ['settings']);
+  }
+
+  function restoreSettingsDefaults() {
+    const defaults = S.clone(S.DEFAULT_SETTINGS);
+    const preserved = {
+      weekdayRate: state.settings.weekdayRate,
+      weekendRate: state.settings.weekendRate,
+      includedGuests: state.settings.includedGuests,
+      extraGuestFee: state.settings.extraGuestFee,
+      petFee: state.settings.petFee,
+      maxGuests: state.settings.maxGuests,
+      maxPets: state.settings.maxPets,
+      pricing: state.settings.pricing,
+      bookingRequirements: state.settings.bookingRequirements,
+      selfCheckIn: state.settings.selfCheckIn,
+      checkout: state.settings.checkout,
+      houseRules: state.settings.houseRules,
+      nearby: state.settings.nearby,
+      lunaDescription: state.settings.lunaDescription,
+      lunaFaqs: state.settings.lunaFaqs,
+      lunaHouseRules: state.settings.lunaHouseRules,
+      lunaParking: state.settings.lunaParking,
+      lunaContact: state.settings.lunaContact,
+      lunaRecommendations: state.settings.lunaRecommendations,
+    };
+    state.settings = {
+      ...defaults,
+      ...preserved,
+      socials: { ...defaults.socials, ...state.settings.socials },
+    };
+    S.saveSettings(state.settings);
+    renderSettings();
+    renderGuide();
+    renderPricing();
+    renderDashboard();
+    broadcastUpdate('settings', ['settings']);
   }
 
   function renderDashboard() {
@@ -291,6 +402,80 @@
           <p>Hero card, booking modal, and emails all read from the same pricing values saved in the Pricing section.</p>
         </div>`,
     ].join('');
+
+    const mainPageMap = $('#mainPageMap');
+    if (mainPageMap) {
+      const visibleAmenities = state.amenities.filter((item) => !item.hidden).length;
+      const visibleMedia = state.media.filter((item) => !item.hidden).length;
+      const reviewCount = state.reviews.filter((item) => !item.hidden).length;
+      mainPageMap.innerHTML = [
+        {
+          title: 'Hero & booking',
+          href: '#settings',
+          note: 'Property name, hero copy, hero image, booking labels, and contact links.',
+          meta: `${state.settings.propertyName || state.settings.name || 'Luxury Stay'} · ${state.settings.heroTitle || 'Hero title'}`,
+        },
+        {
+          title: 'Location & parking',
+          href: '#settings',
+          note: 'Exact location, Google Maps, Waze, and vehicle notes.',
+          meta: `${state.settings.area || 'Address'} · ${state.settings.parking || 'Parking note'}`,
+        },
+        {
+          title: 'Pricing manager',
+          href: '#pricing',
+          note: 'Weekday / weekend rates, included guests, extra guests, pets, and limits.',
+          meta: `${S.formatCurrency(state.settings.weekdayRate || 0)} / ${S.formatCurrency(state.settings.weekendRate || 0)}`,
+        },
+        {
+          title: 'Stay guide',
+          href: '#guide',
+          note: 'Self check-in, checkout reminders, house rules, nearby places, and booking requirements.',
+          meta: `${state.settings.selfCheckIn.length} check-in steps`,
+        },
+        {
+          title: 'Gallery',
+          href: '#gallery',
+          note: 'Upload, edit, hide, delete, feature, and reorder photos / videos from your desktop.',
+          meta: `${visibleMedia} visible media items`,
+        },
+        {
+          title: 'Amenities',
+          href: '#amenities',
+          note: 'Add, edit, delete, restore, hide, feature, and reorder amenities.',
+          meta: `${visibleAmenities} visible amenities`,
+        },
+        {
+          title: 'Reviews',
+          href: '#reviews',
+          note: 'Feature verified guest reviews and manage review invitations.',
+          meta: `${reviewCount} visible reviews`,
+        },
+        {
+          title: 'Luna AI',
+          href: '#luna',
+          note: 'Property description, FAQs, house rules, parking, contact info, and recommendations.',
+          meta: `${(state.settings.lunaFaqs || []).length} FAQs configured`,
+        },
+        {
+          title: 'Site settings',
+          href: '#settings',
+          note: 'Logo, social links, hero images, and automatic day / night mode.',
+          meta: `${state.settings.themeStartDay || '06:00'} / ${state.settings.themeStartNight || '18:00'}`,
+        },
+      ].map((item) => `
+        <div class="card-item">
+          <div class="card-item-head">
+            <div>
+              <strong>${S.escapeHtml(item.title)}</strong>
+              <span>${S.escapeHtml(item.meta)}</span>
+            </div>
+            <a class="btn btn-secondary small" href="${S.escapeHtml(item.href)}">Edit</a>
+          </div>
+          <p>${S.escapeHtml(item.note)}</p>
+        </div>
+      `).join('');
+    }
   }
 
   async function loadBookings() {
@@ -632,7 +817,23 @@
 
   function renderMedia() {
     const list = $('#mediaList');
+    const submitBtn = $('#mediaSubmitBtn');
+    const cancelBtn = $('#cancelMediaEditBtn');
+    const fileInput = $('#mediaFileInput');
+    const srcInput = $('#mediaSrcInput');
     if (!list) return;
+
+    const editing = state.media.find((item) => item.id === state.editingMediaId) || null;
+    if (submitBtn) submitBtn.textContent = editing ? 'Update media' : 'Add media';
+    if (cancelBtn) cancelBtn.hidden = !editing;
+
+    if (editing) {
+      $('#mediaTypeInput').value = editing.type || 'image';
+      $('#mediaLabelInput').value = editing.label || editing.alt || '';
+      if (fileInput) fileInput.value = '';
+      if (srcInput) srcInput.value = editing.storagePath ? '' : (editing.src || '');
+    }
+
     if (!state.media.length) {
       list.innerHTML = '<div class="admin-empty">No media items yet.</div>';
       return;
@@ -643,7 +844,7 @@
         <div class="card-item-head" style="margin-top:10px;">
           <div>
             <strong>${S.escapeHtml(item.label || item.alt || 'Media')}</strong>
-            <span>${item.type === 'video' ? 'Video' : 'Photo'}</span>
+            <span>${item.type === 'video' ? 'Video' : 'Photo'}${item.storagePath ? ' · Uploaded' : ''}</span>
           </div>
           <span class="badge ${item.featured ? 'success' : 'info'}">${item.featured ? 'Featured' : 'Normal'}</span>
         </div>
@@ -651,6 +852,7 @@
         <div class="card-actions">
           <button class="btn btn-secondary small" data-media-action="up" data-media-id="${S.escapeHtml(item.id)}">Up</button>
           <button class="btn btn-secondary small" data-media-action="down" data-media-id="${S.escapeHtml(item.id)}">Down</button>
+          <button class="btn btn-secondary small" data-media-action="edit" data-media-id="${S.escapeHtml(item.id)}">Edit</button>
           <button class="btn btn-secondary small" data-media-action="feature" data-media-id="${S.escapeHtml(item.id)}">Feature</button>
           <button class="btn btn-secondary small" data-media-action="toggle" data-media-id="${S.escapeHtml(item.id)}">${item.hidden ? 'Show' : 'Hide'}</button>
           <button class="btn btn-danger small" data-media-action="delete" data-media-id="${S.escapeHtml(item.id)}">Delete</button>
@@ -659,7 +861,7 @@
     `).join('');
 
     $$('#mediaList [data-media-action]').forEach((button) => {
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         const id = button.dataset.mediaId;
         const action = button.dataset.mediaAction;
         const idx = state.media.findIndex((item) => item.id === id);
@@ -668,25 +870,92 @@
           [state.media[idx - 1], state.media[idx]] = [state.media[idx], state.media[idx - 1]];
         } else if (action === 'down' && idx < state.media.length - 1) {
           [state.media[idx + 1], state.media[idx]] = [state.media[idx], state.media[idx + 1]];
+        } else if (action === 'edit') {
+          state.editingMediaId = id;
+          renderMedia();
+          return;
         } else if (action === 'feature') {
-          state.media = state.media.map((item) => ({ ...item, featured: item.id === id }));
+          state.media = state.media.map((mediaItem) => ({ ...mediaItem, featured: mediaItem.id === id }));
         } else if (action === 'toggle') {
           state.media[idx].hidden = !state.media[idx].hidden;
         } else if (action === 'delete') {
           if (!window.confirm('Delete this media item?')) return;
-          state.media = state.media.filter((item) => item.id !== id);
+          const item = state.media[idx];
+          await deleteUploadedMedia(item);
+          state.media = state.media.filter((mediaItem) => mediaItem.id !== id);
         }
         S.saveMedia(state.media);
         renderMedia();
+        broadcastUpdate('media', ['media']);
       });
     });
   }
 
+  function renderAmenityIconButton(item, selectedKey) {
+    const icon = ICON_LIBRARY_BY_KEY.get(item.key) || ICON_LIBRARY_BY_KEY.get(DEFAULT_ICON_KEY);
+    const selected = item.key === selectedKey ? ' selected' : '';
+    return `
+      <button type="button" class="icon-choice${selected}" data-icon-key="${item.key}" aria-pressed="${item.key === selectedKey ? 'true' : 'false'}">
+        <span class="icon-choice-mark" aria-hidden="true">${icon.svg}</span>
+        <span>${S.escapeHtml(item.label)}</span>
+      </button>
+    `;
+  }
+
+  function renderAmenityIconPicker() {
+    const input = $('#amenityIconInput');
+    const preview = $('#amenityIconPreview');
+    const name = $('#amenityIconName');
+    const note = $('#amenityIconNote');
+    const search = $('#amenityIconSearch');
+    const suggestions = $('#amenityIconSuggestions');
+    const libraryWrap = $('#amenityIconLibraryWrap');
+    const library = $('#amenityIconLibrary');
+    const browseBtn = $('#amenityIconBrowseBtn');
+    if (!input || !preview || !name || !note || !search || !suggestions || !libraryWrap || !library || !browseBtn) return;
+
+    const title = String($('#amenityTitleInput')?.value || '').trim();
+    const category = String($('#amenityCategoryInput')?.value || 'Other').trim();
+    const description = String($('#amenityDescInput')?.value || '').trim();
+    const suggestedKey = S.guessAmenityIconKey(title, category, description);
+    const storedKey = String(input.value || '').trim().toLowerCase();
+
+    if (state.iconSelectionMode === 'default') {
+      input.value = DEFAULT_ICON_KEY;
+    } else if (state.iconSelectionMode === 'auto' || !ICON_LIBRARY_BY_KEY.has(storedKey)) {
+      input.value = suggestedKey;
+    }
+
+    const selectedKey = S.resolveAmenityIconKey(input.value, title, category, description);
+    const selected = ICON_LIBRARY_BY_KEY.get(selectedKey) || ICON_LIBRARY_BY_KEY.get(DEFAULT_ICON_KEY);
+    preview.innerHTML = selected.svg;
+    name.textContent = selected.label;
+    note.textContent = state.iconSelectionMode === 'default'
+      ? 'Default icon chosen for this amenity.'
+      : (selectedKey === suggestedKey
+        ? 'Suggested icon based on the amenity name and category.'
+        : 'Custom icon chosen from the library.');
+
+    const query = String(search.value || '').trim().toLowerCase();
+    const libraryItems = ICON_LIBRARY.filter((item) => item.key !== DEFAULT_ICON_KEY && (
+      !query || [item.key, item.label, ...(item.terms || [])].join(' ').toLowerCase().includes(query)
+    ));
+    const suggestedKeys = Array.from(new Set([
+      suggestedKey,
+      selectedKey,
+      'wifi', 'car', 'wheel', 'bed', 'pet', 'security', 'coffee', 'kitchen', 'tv'
+    ].filter((key) => ICON_LIBRARY_BY_KEY.has(key) && key !== DEFAULT_ICON_KEY)));
+
+    suggestions.innerHTML = suggestedKeys.map((key) => renderAmenityIconButton(ICON_LIBRARY_BY_KEY.get(key), selectedKey)).join('') || '<div class="admin-empty">No suggestions available.</div>';
+    library.innerHTML = libraryItems.map((item) => renderAmenityIconButton(item, selectedKey)).join('') || '<div class="admin-empty">No icons match that search.</div>';
+    libraryWrap.classList.toggle('hidden', !state.iconLibraryOpen);
+    browseBtn.textContent = state.iconLibraryOpen ? 'Hide icons' : 'Browse icons';
+  }
+
   function renderAmenities() {
     const list = $('#amenityList');
-    const iconSelect = $('#amenityIconInput');
-    if (!list || !iconSelect) return;
-    iconSelect.innerHTML = ICON_KEYS.map((key) => `<option value="${key}">${key}</option>`).join('');
+    if (!list) return;
+    renderAmenityIconPicker();
     if (!state.amenities.length) {
       list.innerHTML = '<div class="admin-empty">No amenities configured.</div>';
       return;
@@ -698,7 +967,7 @@
             <strong>${S.escapeHtml(item.title || 'Amenity')}</strong>
             <span>${S.escapeHtml(item.category || 'Amenity')}</span>
           </div>
-          <span class="badge ${item.featured ? 'success' : 'info'}">${S.escapeHtml(item.icon || 'default')}</span>
+          <span class="badge ${item.featured ? 'success' : 'info'}">${S.escapeHtml(S.iconLabel(S.resolveAmenityIconKey(item.icon || DEFAULT_ICON_KEY, item.title || '', item.category || '', item.description || '')))}</span>
         </div>
         <p>${S.escapeHtml(item.description || '')}</p>
         <div class="card-actions">
@@ -726,8 +995,11 @@
           const amenity = state.amenities[idx];
           $('#amenityTitleInput').value = amenity.title || '';
           $('#amenityCategoryInput').value = amenity.category || 'Other';
-          $('#amenityIconInput').value = amenity.icon || 'default';
+          $('#amenityIconInput').value = S.resolveAmenityIconKey(amenity.icon || DEFAULT_ICON_KEY, amenity.title || '', amenity.category || '', amenity.description || '');
           $('#amenityDescInput').value = amenity.description || '';
+          state.iconLibraryOpen = false;
+          state.iconSelectionMode = 'manual';
+          renderAmenityIconPicker();
           window.location.hash = '#amenities';
         } else if (action === 'toggle') {
           state.amenities[idx].hidden = !state.amenities[idx].hidden;
@@ -746,15 +1018,15 @@
     if (!preview) return;
     const settings = state.settings;
     preview.innerHTML = [
-      { label: 'Booking requirements', items: settings.bookingRequirements },
-      { label: 'Self check-in', items: settings.selfCheckIn },
-      { label: 'Checkout reminders', items: settings.checkout },
-      { label: 'House rules', items: settings.houseRules },
-      { label: 'Nearby places', items: settings.nearby },
+      { label: 'Booking requirements', items: settings.bookingRequirements, note: 'Guest IDs, contact info, and reservation rules.' },
+      { label: 'Self check-in', items: settings.selfCheckIn, note: 'Tap-card arrival steps and unit access.' },
+      { label: 'Checkout reminders', items: settings.checkout, note: 'Departure checklist and housekeeping steps.' },
+      { label: 'House rules', items: settings.houseRules, note: 'Stay rules shown to guests.' },
+      { label: 'Nearby places', items: settings.nearby, note: 'Landmarks and local recommendations.' },
     ].map((section) => `
       <div class="card-item">
         <div class="card-item-head"><strong>${S.escapeHtml(section.label)}</strong><span>${section.items.length} entries</span></div>
-        <p>${S.escapeHtml(section.items[0] || '—')}</p>
+        <p>${S.escapeHtml(section.note)}</p>
       </div>
     `).join('');
 
@@ -828,10 +1100,10 @@
       { label: 'Property name', value: settings.propertyName || settings.name },
       { label: 'Hero copy', value: [settings.heroEyebrow, settings.heroTitle].filter(Boolean).join(' — ') || '—' },
       { label: 'Hero subtitle', value: settings.heroSubtitle || '—' },
-      { label: 'Address', value: `${settings.area || ''} ${settings.building || ''}`.trim() },
+      { label: 'Location & vehicle', value: `${settings.area || '—'} · ${settings.building || '—'} · ${settings.parking || 'Parking note'}` },
+      { label: 'Google Maps / Waze', value: [settings.googleMapsUrl, settings.wazeUrl].filter(Boolean).join(' · ') || '—' },
+      { label: 'Check-in / checkout', value: `${settings.checkIn || '—'} · ${settings.checkOut || '—'}` },
       { label: 'Contact', value: `${settings.contactEmail || '—'} · ${settings.contactPhone || '—'}` },
-      { label: 'Maps links', value: [settings.googleMapsUrl, settings.wazeUrl].filter(Boolean).join(' · ') || '—' },
-      { label: 'Host name', value: settings.hostName || 'Donnie' },
       { label: 'Theme', value: `${settings.themeStartDay || '06:00'} / ${settings.themeStartNight || '18:00'}` },
       { label: 'Socials', value: socialSummary },
     ].map((item) => `
@@ -1049,18 +1321,29 @@
     const file = fileInput?.files?.[0] || null;
     const src = String($('#mediaSrcInput').value || '').trim();
     const label = String($('#mediaLabelInput').value || '').trim();
+    const editing = state.media.find((item) => item.id === state.editingMediaId) || null;
 
-    let mediaSrc = src;
-    let poster;
+    let mediaSrc = src || editing?.src || '';
+    let poster = editing?.poster || undefined;
+    let storagePath = editing?.storagePath || undefined;
 
     if (file) {
-      const maxBytes = 12 * 1024 * 1024;
+      const maxBytes = 40 * 1024 * 1024;
       if (file.size > maxBytes) {
-        const ok = window.confirm('This file is larger than 12 MB. It may be slow to store in the browser. Continue?');
+        const ok = window.confirm('This file is large. Uploading may take a moment. Continue?');
         if (!ok) return;
       }
-      mediaSrc = await readFileAsDataUrl(file);
-      poster = type === 'video' ? './assets/9.jpg' : undefined;
+      try {
+        const uploaded = await prepareMediaUpload(file);
+        mediaSrc = uploaded.src;
+        storagePath = uploaded.storagePath;
+        poster = type === 'video' ? editing?.poster || './assets/9.jpg' : undefined;
+      } catch (uploadErr) {
+        const fallback = await readFileAsDataUrl(file);
+        mediaSrc = fallback;
+        storagePath = undefined;
+        poster = type === 'video' ? editing?.poster || './assets/9.jpg' : undefined;
+      }
     }
 
     if (!mediaSrc) {
@@ -1068,19 +1351,36 @@
       return;
     }
 
+    if (editing && !file && src && src !== editing.src) {
+      storagePath = undefined;
+    }
+
     const altText = label || (file ? file.name : mediaSrc);
-    state.media.unshift({
-      id: S.generateId('media'),
+    const nextItem = {
+      id: editing?.id || S.generateId('media'),
       type,
       src: mediaSrc,
       alt: altText,
       label: altText,
-      featured: false,
-      hidden: false,
+      featured: editing ? !!editing.featured : false,
+      hidden: editing ? !!editing.hidden : false,
       poster,
-    });
+      storagePath,
+    };
+
+    if (editing) {
+      state.media = state.media.map((item) => item.id === editing.id ? { ...item, ...nextItem } : item);
+      if (editing.storagePath && editing.storagePath !== storagePath) {
+        await deleteUploadedMedia(editing);
+      }
+    } else {
+      state.media.unshift(nextItem);
+    }
+
     S.saveMedia(state.media);
+    state.editingMediaId = null;
     $('#mediaForm').reset();
+    $('#mediaTypeInput').value = 'image';
     renderMedia();
     broadcastUpdate('media', ['media']);
   }
@@ -1089,8 +1389,8 @@
     e.preventDefault();
     const title = String($('#amenityTitleInput').value || '').trim();
     const category = String($('#amenityCategoryInput').value || 'Other').trim();
-    const icon = String($('#amenityIconInput').value || 'default').trim();
     const description = String($('#amenityDescInput').value || '').trim();
+    const icon = S.resolveAmenityIconKey($('#amenityIconInput').value || DEFAULT_ICON_KEY, title, category, description);
     if (!title || !description) {
       alert('Enter an amenity title and description.');
       return;
@@ -1109,6 +1409,9 @@
     state.editingAmenityId = null;
     S.saveAmenities(state.amenities);
     $('#amenityForm').reset();
+    $('#amenityIconInput').value = DEFAULT_ICON_KEY;
+    state.iconLibraryOpen = false;
+    state.iconSelectionMode = 'auto';
     renderAmenities();
     broadcastUpdate('amenities', ['amenities']);
   }
@@ -1224,12 +1527,67 @@
     $('#guideForm')?.addEventListener('submit', (e) => { e.preventDefault(); saveGuideFromForm(); });
     $('#lunaForm')?.addEventListener('submit', (e) => { e.preventDefault(); saveLunaFromForm(); });
     $('#settingsForm')?.addEventListener('submit', (e) => { e.preventDefault(); saveSettingsFromForm(); });
+    $('#restoreGuideDefaultsBtn')?.addEventListener('click', restoreGuideDefaults);
+    $('#restoreSettingsDefaultsBtn')?.addEventListener('click', restoreSettingsDefaults);
     $('#mediaForm')?.addEventListener('submit', saveMediaFromForm);
     $('#amenityForm')?.addEventListener('submit', saveAmenityFromForm);
-    $('#clearAmenityBtn')?.addEventListener('click', () => { state.editingAmenityId = null; $('#amenityForm').reset(); });
+    $('#clearAmenityBtn')?.addEventListener('click', () => {
+      state.editingAmenityId = null;
+      state.iconLibraryOpen = false;
+      state.iconSelectionMode = 'auto';
+      $('#amenityForm').reset();
+      $('#amenityIconInput').value = DEFAULT_ICON_KEY;
+      renderAmenities();
+    });
     $('#restorePricingDefaultsBtn')?.addEventListener('click', restorePricingDefaults);
+    $('#cancelMediaEditBtn')?.addEventListener('click', () => {
+      state.editingMediaId = null;
+      renderMedia();
+    });
     $('#restoreMediaDefaultsBtn')?.addEventListener('click', restoreMediaDefaults);
     $('#restoreAmenityDefaultsBtn')?.addEventListener('click', restoreAmenitiesDefaults);
+    $('#amenityTitleInput')?.addEventListener('input', () => {
+      if (state.iconSelectionMode === 'auto') {
+        $('#amenityIconInput').value = S.guessAmenityIconKey($('#amenityTitleInput').value, $('#amenityCategoryInput').value, $('#amenityDescInput').value);
+      }
+      renderAmenityIconPicker();
+    });
+    $('#amenityCategoryInput')?.addEventListener('change', () => {
+      if (state.iconSelectionMode === 'auto') {
+        $('#amenityIconInput').value = S.guessAmenityIconKey($('#amenityTitleInput').value, $('#amenityCategoryInput').value, $('#amenityDescInput').value);
+      }
+      renderAmenityIconPicker();
+    });
+    $('#amenityDescInput')?.addEventListener('input', () => renderAmenityIconPicker());
+    $('#amenityIconSearch')?.addEventListener('input', () => renderAmenityIconPicker());
+    $('#amenityIconAutoBtn')?.addEventListener('click', () => {
+      state.iconSelectionMode = 'auto';
+      $('#amenityIconInput').value = S.guessAmenityIconKey($('#amenityTitleInput').value, $('#amenityCategoryInput').value, $('#amenityDescInput').value);
+      renderAmenityIconPicker();
+    });
+    $('#amenityIconDefaultBtn')?.addEventListener('click', () => {
+      state.iconSelectionMode = 'default';
+      $('#amenityIconInput').value = DEFAULT_ICON_KEY;
+      renderAmenityIconPicker();
+    });
+    $('#amenityIconBrowseBtn')?.addEventListener('click', () => {
+      state.iconLibraryOpen = !state.iconLibraryOpen;
+      renderAmenityIconPicker();
+    });
+    $('#amenityIconSuggestions')?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-icon-key]');
+      if (!button) return;
+      state.iconSelectionMode = 'manual';
+      $('#amenityIconInput').value = button.dataset.iconKey || DEFAULT_ICON_KEY;
+      renderAmenityIconPicker();
+    });
+    $('#amenityIconLibrary')?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-icon-key]');
+      if (!button) return;
+      state.iconSelectionMode = 'manual';
+      $('#amenityIconInput').value = button.dataset.iconKey || DEFAULT_ICON_KEY;
+      renderAmenityIconPicker();
+    });
 
     $('#prevMonthBtn')?.addEventListener('click', () => {
       state.calendarMonth = new Date(Date.UTC(state.calendarMonth.getUTCFullYear(), state.calendarMonth.getUTCMonth() - 1, 1));
