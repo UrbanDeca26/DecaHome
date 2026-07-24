@@ -3,205 +3,515 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Luxury Stay Admin Portal</title>
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="theme-color" content="#161311" />
+  <title>Luxury Stay Admin</title>
+  <meta name="theme-color" content="#f3efe7" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="../style.css" />
   <link rel="stylesheet" href="./css/admin.css" />
 </head>
-<body class="admin-page">
+<body>
   <div class="admin-app">
     <aside class="admin-sidebar">
-      <div class="admin-brand">
-        <div class="admin-brand-mark">LS</div>
-        <div>
+      <a class="admin-brand" href="#dashboard">
+        <span class="admin-brand-mark">LS</span>
+        <span>
           <strong>Luxury Stay</strong>
           <small>Admin Portal</small>
-        </div>
-      </div>
+        </span>
+      </a>
 
       <nav class="admin-nav" aria-label="Admin navigation">
-        <a href="#dashboard">Dashboard</a>
-        <a href="#bookings">Bookings</a>
-        <a href="#availability">Availability</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#gallery">Gallery</a>
-        <a href="#amenities">Amenities</a>
-        <a href="#guide">Stay Guide</a>
-        <a href="#reviews">Reviews</a>
-        <a href="#luna">Luna AI</a>
-        <a href="#inquiries">Guest Inquiries</a>
-        <a href="#settings">Site Settings</a>
+        <div class="nav-group-label">Management</div>
+        <a href="#dashboard" class="nav-link active"><i class="fa-solid fa-chart-column"></i>Dashboard</a>
+        <a href="#bookings" class="nav-link"><i class="fa-solid fa-calendar-check"></i>Bookings</a>
+        <a href="#calendar" class="nav-link"><i class="fa-solid fa-calendar-days"></i>Availability</a>
+        <a href="#pricing" class="nav-link"><i class="fa-solid fa-money-bill-wave"></i>Pricing</a>
+        <a href="#gallery" class="nav-link"><i class="fa-solid fa-photo-film"></i>Gallery</a>
+        <a href="#amenities" class="nav-link"><i class="fa-solid fa-bell-concierge"></i>Amenities</a>
+        <a href="#guide" class="nav-link"><i class="fa-solid fa-book-open"></i>Stay Guide</a>
+        <a href="#reviews" class="nav-link"><i class="fa-solid fa-star"></i>Reviews</a>
+        <a href="#luna" class="nav-link"><i class="fa-solid fa-wand-magic-sparkles"></i>Luna AI</a>
+        <a href="#inquiries" class="nav-link"><i class="fa-solid fa-inbox"></i>Guest Inquiries</a>
+        <a href="#settings" class="nav-link"><i class="fa-solid fa-sliders"></i>Site Settings</a>
+        <div class="nav-group-label">System</div>
+        <a href="#developer" class="nav-link"><i class="fa-solid fa-shield-halved"></i>Developer</a>
       </nav>
 
       <div class="admin-sidebar-footer">
-        <p id="adminClock">Checking session...</p>
-        <button class="btn btn-secondary full" id="logoutBtn" type="button">Logout</button>
+        <p>Pricing, bookings, and review moderation all read from the same shared property settings.</p>
       </div>
     </aside>
 
     <main class="admin-main">
       <header class="admin-topbar">
         <div>
-          <span class="section-pill">Dedicated Admin</span>
-          <h1>Manage the Luxury Stay property</h1>
-          <p>Bookings, content, media, pricing, and system settings in one place.</p>
+          <h1>Luxury Stay Admin Dashboard</h1>
+          <p>Property management, reviews, and settings in one place.</p>
         </div>
-        <div class="admin-topbar-meta">
-          <span class="status-pill" id="authStatus">Checking session...</span>
-          <span class="status-pill muted" id="themeStatus">Auto theme</span>
+        <div class="admin-topbar-actions">
+          <a class="btn btn-ghost" href="/" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-eye"></i>Preview Live Site</a>
+          <button class="btn btn-primary" id="saveAllBtn" type="button"><i class="fa-solid fa-floppy-disk"></i>Save All Changes</button>
+          <button class="btn btn-secondary" id="exportJsonBtn" type="button"><i class="fa-solid fa-file-export"></i>Import/Export JSON</button>
+          <button class="btn btn-secondary" id="logoutBtn" type="button"><i class="fa-solid fa-right-from-bracket"></i>Logout</button>
+          <input type="file" id="importJsonInput" accept="application/json" hidden />
         </div>
       </header>
 
-      <section class="admin-section" id="dashboard">
-        <div class="section-head row">
-          <div>
-            <span>Dashboard</span>
-            <h2>Overview</h2>
-            <p>At-a-glance property activity and quick actions.</p>
+      <div class="admin-content">
+        <section class="admin-section" id="dashboard">
+          <div class="section-head">
+            <div>
+              <span>Dashboard</span>
+              <h2>Property overview</h2>
+              <p>Bookings, upcoming arrivals, departures, reviews, and inquiries at a glance.</p>
+            </div>
           </div>
-        </div>
-        <div class="card-grid" id="dashboardCards"></div>
-        <div class="quick-actions" id="dashboardActions"></div>
-      </section>
+          <div class="kpi-grid" id="dashboardKpis"></div>
+          <div class="grid-2" style="margin-top:14px;">
+            <div class="panel">
+              <h3>Quick actions</h3>
+              <div class="quick-links">
+                <a class="btn btn-secondary" href="#bookings">Bookings</a>
+                <a class="btn btn-secondary" href="#calendar">Calendar</a>
+                <a class="btn btn-secondary" href="#gallery">Gallery</a>
+                <a class="btn btn-secondary" href="#pricing">Pricing</a>
+              </div>
+            </div>
+            <div class="panel">
+              <h3>Today’s snapshot</h3>
+              <div class="card-stack" id="dashboardSnapshot"></div>
+            </div>
+          </div>
+        </section>
 
-      <section class="admin-section" id="bookings">
-        <div class="section-head row">
-          <div>
-            <span>Bookings</span>
-            <h2>Manage reservations</h2>
-            <p>Track booking requests, update status, and review details.</p>
+        <section class="admin-section" id="bookings">
+          <div class="section-head">
+            <div>
+              <span>Bookings</span>
+              <h2>Reservations and status updates</h2>
+              <p>View booking details, update status, cancel bookings, and send review invitations from completed stays.</p>
+            </div>
           </div>
-        </div>
-        <div id="bookingsToolbar"></div>
-        <div class="split-layout">
-          <div id="bookingsTable"></div>
-          <div id="bookingDetails" class="side-panel"></div>
-        </div>
-      </section>
+          <div class="panel">
+            <div class="section-actions">
+              <button class="btn btn-secondary" id="refreshBookingsBtn" type="button">Refresh bookings</button>
+            </div>
+            <div class="table-wrap" style="margin-top:14px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Reference</th><th>Guest</th><th>Contact</th><th>Dates</th><th>Guests / Pets</th><th>Total</th><th>Status</th><th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="bookingsTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
 
-      <section class="admin-section" id="availability">
-        <div class="section-head row">
-          <div>
-            <span>Availability</span>
-            <h2>Calendar controls</h2>
-            <p>Block dates, unblock dates, and review reserved periods.</p>
+        <section class="admin-section" id="calendar">
+          <div class="section-head">
+            <div>
+              <span>Availability</span>
+              <h2>Calendar overview</h2>
+              <p>Block dates, release dates, and view reserved dates without exposing guest notes.</p>
+            </div>
           </div>
-        </div>
-        <div class="split-layout availability-layout">
-          <div id="availabilityPanel"></div>
-          <div id="availabilityList" class="side-panel"></div>
-        </div>
-      </section>
+          <div class="grid-2">
+            <div class="panel">
+              <div class="calendar-toolbar">
+                <div>
+                  <h3 id="calendarTitle">Month</h3>
+                  <p class="muted">Reserved, blocked, and maintenance days are color-coded.</p>
+                </div>
+                <div class="section-actions">
+                  <button class="btn btn-secondary small" id="prevMonthBtn" type="button"><i class="fa-solid fa-chevron-left"></i></button>
+                  <button class="btn btn-secondary small" id="nextMonthBtn" type="button"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+              </div>
+              <div class="calendar-grid" id="calendarGrid"></div>
+              <div class="legend">
+                <span class="dot" style="color:#2d6a4f;">Available</span>
+                <span class="dot" style="color:#8b3a3a;">Reserved</span>
+                <span class="dot" style="color:#636363;">Blocked</span>
+                <span class="dot" style="color:#3d6f8d;">Maintenance</span>
+                <span class="dot" style="color:#8c6f14;">Owner stay</span>
+              </div>
+            </div>
+            <div class="panel">
+              <h3>Quick block dates</h3>
+              <p class="muted">Use this to block maintenance or private use dates. Reservations still come from bookings.</p>
+              <div class="form-grid" style="margin-top:12px;">
+                <label class="field">Date
+                  <input type="date" id="blockDateInput" />
+                </label>
+                <label class="field">Type
+                  <select id="blockDateType">
+                    <option value="blocked">Blocked</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="owner">Owner stay</option>
+                  </select>
+                </label>
+                <label class="field span-2">Note
+                  <input type="text" id="blockDateNote" placeholder="Optional note" />
+                </label>
+              </div>
+              <div class="section-actions" style="margin-top:12px;">
+                <button class="btn btn-primary" id="addBlockDateBtn" type="button">Block date</button>
+                <button class="btn btn-secondary" id="clearBlocksBtn" type="button">Clear all blocked dates</button>
+              </div>
+              <div class="card-list" id="blockedDatesList" style="margin-top:14px;"></div>
+            </div>
+          </div>
+        </section>
 
-      <section class="admin-section" id="pricing">
-        <div class="section-head row">
-          <div>
-            <span>Pricing</span>
-            <h2>Update rates</h2>
-            <p>Editing the rates updates the live estimator immediately.</p>
+        <section class="admin-section" id="pricing">
+          <div class="section-head">
+            <div>
+              <span>Pricing</span>
+              <h2>Single source pricing controls</h2>
+              <p>These values feed the public hero card, booking modal, confirmation emails, and Luna responses.</p>
+            </div>
           </div>
-        </div>
-        <div class="split-layout">
-          <div id="pricingFormWrap"></div>
-          <div id="pricingPreview" class="side-panel"></div>
-        </div>
-      </section>
+          <div class="grid-2">
+            <div class="panel">
+              <form id="pricingForm" class="admin-form">
+                <div class="form-grid">
+                  <label class="field">Weekday rate
+                    <input type="number" id="weekdayRateInput" min="0" step="1" />
+                  </label>
+                  <label class="field">Weekend rate
+                    <input type="number" id="weekendRateInput" min="0" step="1" />
+                  </label>
+                  <label class="field">Included guests
+                    <input type="number" id="includedGuestsInput" min="1" step="1" />
+                  </label>
+                  <label class="field">Extra guest fee
+                    <input type="number" id="extraGuestFeeInput" min="0" step="1" />
+                  </label>
+                  <label class="field">Pet fee
+                    <input type="number" id="petFeeInput" min="0" step="1" />
+                  </label>
+                  <label class="field">Maximum guests
+                    <input type="number" id="maxGuestsInput" min="1" step="1" />
+                  </label>
+                  <label class="field">Maximum pets
+                    <input type="number" id="maxPetsInput" min="0" step="1" />
+                  </label>
+                </div>
+                <div class="section-actions" style="margin-top:14px;">
+                  <button class="btn btn-primary" type="submit">Save pricing</button>
+                </div>
+              </form>
+            </div>
+            <div class="panel">
+              <h3>Price guide preview</h3>
+              <div class="card-list" id="pricingPreview"></div>
+            </div>
+          </div>
+        </section>
 
-      <section class="admin-section" id="gallery">
-        <div class="section-head row">
-          <div>
-            <span>Gallery</span>
-            <h2>Media manager</h2>
-            <p>Upload, hide, feature, delete, and reorder photos or videos.</p>
+        <section class="admin-section" id="gallery">
+          <div class="section-head">
+            <div>
+              <span>Gallery Manager</span>
+              <h2>Photos and videos</h2>
+              <p>Upload, feature, hide, delete, and reorder gallery media.</p>
+            </div>
           </div>
-        </div>
-        <div id="galleryManager"></div>
-      </section>
+          <div class="grid-2">
+            <div class="panel">
+              <form id="mediaForm" class="admin-form">
+                <div class="form-grid">
+                  <label class="field">Type
+                    <select id="mediaTypeInput"><option value="image">Photo</option><option value="video">Video</option></select>
+                  </label>
+                  <label class="field">Label
+                    <input id="mediaLabelInput" type="text" placeholder="Living room" />
+                  </label>
+                  <label class="field span-2">File or URL
+                    <input id="mediaSrcInput" type="text" placeholder="Paste a file path or data URL" />
+                  </label>
+                </div>
+                <div class="section-actions" style="margin-top:14px;">
+                  <button class="btn btn-primary" type="submit">Add media</button>
+                </div>
+              </form>
+            </div>
+            <div class="panel">
+              <div class="section-actions" style="justify-content: space-between;">
+                <h3>Media list</h3>
+              </div>
+              <div class="media-grid" id="mediaList"></div>
+            </div>
+          </div>
+        </section>
 
-      <section class="admin-section" id="amenities">
-        <div class="section-head row">
-          <div>
-            <span>Amenities</span>
-            <h2>Manage amenity cards</h2>
-            <p>Add, edit, reorder, hide, or remove amenities from the listing.</p>
+        <section class="admin-section" id="amenities">
+          <div class="section-head">
+            <div>
+              <span>Amenities</span>
+              <h2>Amenity cards</h2>
+              <p>Add, edit, hide, delete, and reorder amenity cards.</p>
+            </div>
           </div>
-        </div>
-        <div class="split-layout">
-          <div id="amenityFormWrap"></div>
-          <div id="amenityListWrap" class="side-panel"></div>
-        </div>
-      </section>
+          <div class="grid-2">
+            <div class="panel">
+              <form id="amenityForm" class="admin-form">
+                <div class="form-grid">
+                  <label class="field">Title
+                    <input id="amenityTitleInput" type="text" placeholder="Fast Wi-Fi" />
+                  </label>
+                  <label class="field">Category
+                    <select id="amenityCategoryInput">
+                      <option value="In unit">In unit</option>
+                      <option value="Building">Building</option>
+                      <option value="Access">Access</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </label>
+                  <label class="field">Icon
+                    <select id="amenityIconInput"></select>
+                  </label>
+                  <label class="field span-2">Description
+                    <textarea id="amenityDescInput" placeholder="Describe the amenity"></textarea>
+                  </label>
+                </div>
+                <div class="section-actions" style="margin-top:14px;">
+                  <button class="btn btn-primary" type="submit">Save amenity</button>
+                  <button class="btn btn-secondary" id="clearAmenityBtn" type="button">Clear</button>
+                </div>
+              </form>
+            </div>
+            <div class="panel">
+              <div class="card-list" id="amenityList"></div>
+            </div>
+          </div>
+        </section>
 
-      <section class="admin-section" id="guide">
-        <div class="section-head row">
-          <div>
-            <span>Stay Guide</span>
-            <h2>Rich content editor</h2>
-            <p>Update guest-facing information with links and structured text.</p>
+        <section class="admin-section" id="guide">
+          <div class="section-head">
+            <div>
+              <span>Stay Guide</span>
+              <h2>Editable information panels</h2>
+              <p>Control the visible guide content for Wi-Fi, parking, check-in, checkout, rules, nearby places, and emergency info.</p>
+            </div>
           </div>
-        </div>
-        <div id="guideEditor"></div>
-      </section>
+          <div class="grid-2">
+            <div class="panel">
+              <form id="guideForm" class="admin-form">
+                <label class="field">Booking requirements
+                  <textarea id="bookingRequirementsInput"></textarea>
+                </label>
+                <label class="field">Self check-in steps
+                  <textarea id="selfCheckInInput"></textarea>
+                </label>
+                <label class="field">Checkout reminders
+                  <textarea id="checkoutInput"></textarea>
+                </label>
+                <label class="field">House rules
+                  <textarea id="houseRulesInput"></textarea>
+                </label>
+                <label class="field">Nearby places
+                  <textarea id="nearbyInput"></textarea>
+                </label>
+                <div class="section-actions" style="margin-top:14px;">
+                  <button class="btn btn-primary" type="submit">Save guide</button>
+                </div>
+              </form>
+            </div>
+            <div class="panel">
+              <h3>Guide preview</h3>
+              <div class="card-list" id="guidePreview"></div>
+            </div>
+          </div>
+        </section>
 
-      <section class="admin-section" id="reviews">
-        <div class="section-head row">
-          <div>
-            <span>Reviews</span>
-            <h2>Verified guest reviews</h2>
-            <p>Feature, hide, or delete reviews without changing submission flow.</p>
+        <section class="admin-section" id="reviews">
+          <div class="section-head">
+            <div>
+              <span>Reviews</span>
+              <h2>Verified guest reviews</h2>
+              <p>View all reviews, feature a review, hide inappropriate content, delete bad reviews, or send review invitations.</p>
+            </div>
           </div>
-        </div>
-        <div id="reviewsManager"></div>
-      </section>
+          <div class="grid-2">
+            <div class="panel">
+              <div class="section-actions" style="justify-content: space-between; margin-bottom:10px;">
+                <h3>Moderation queue</h3>
+                <button class="btn btn-secondary small" id="refreshReviewsBtn" type="button">Refresh</button>
+              </div>
+              <div class="reviews-scroll" id="reviewList"></div>
+            </div>
+            <div class="panel">
+              <h3>Send review invitation</h3>
+              <p class="muted">After checkout, send a verified review invitation using the booking reference. The guest will receive the token in their email receipt.</p>
+              <label class="field" style="margin-top:12px;">Booking reference
+                <input id="reviewInviteRefInput" type="text" placeholder="LS-20260724-0001" />
+              </label>
+              <div class="section-actions" style="margin-top:12px;">
+                <button class="btn btn-primary" id="sendReviewInviteBtn" type="button">Send invitation</button>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      <section class="admin-section" id="luna">
-        <div class="section-head row">
-          <div>
-            <span>Luna AI</span>
-            <h2>Adjust assistant responses</h2>
-            <p>Keep Luna grounded in the property details and FAQs.</p>
+        <section class="admin-section" id="luna">
+          <div class="section-head">
+            <div>
+              <span>Luna AI</span>
+              <h2>Property knowledge and responses</h2>
+              <p>Edit the knowledge that powers Luna’s answers without changing the public layout.</p>
+            </div>
           </div>
-        </div>
-        <div id="lunaEditor"></div>
-      </section>
+          <div class="grid-2">
+            <div class="panel">
+              <form id="lunaForm" class="admin-form">
+                <label class="field">Property description
+                  <textarea id="lunaDescriptionInput"></textarea>
+                </label>
+                <label class="field">FAQ entries (one per line: Question | Answer)
+                  <textarea id="lunaFaqsInput"></textarea>
+                </label>
+                <label class="field">House rules
+                  <textarea id="lunaHouseRulesInput"></textarea>
+                </label>
+                <label class="field">Parking information
+                  <textarea id="lunaParkingInput"></textarea>
+                </label>
+                <label class="field">Contact information
+                  <textarea id="lunaContactInput"></textarea>
+                </label>
+                <label class="field">Local recommendations
+                  <textarea id="lunaRecommendationsInput"></textarea>
+                </label>
+                <div class="section-actions" style="margin-top:14px;">
+                  <button class="btn btn-primary" type="submit">Save Luna data</button>
+                </div>
+              </form>
+            </div>
+            <div class="panel">
+              <h3>Response preview</h3>
+              <div class="card-list" id="lunaPreview"></div>
+            </div>
+          </div>
+        </section>
 
-      <section class="admin-section" id="inquiries">
-        <div class="section-head row">
-          <div>
-            <span>Guest inquiries</span>
-            <h2>Inbox</h2>
-            <p>Reply to, resolve, or review the messages guests submitted.</p>
+        <section class="admin-section" id="inquiries">
+          <div class="section-head">
+            <div>
+              <span>Guest Inquiries</span>
+              <h2>Messages from the site</h2>
+              <p>Review guest questions submitted through Luna and mark them resolved.</p>
+            </div>
           </div>
-        </div>
-        <div id="inquiryManager"></div>
-      </section>
+          <div class="grid-2">
+            <div class="panel">
+              <div class="card-list" id="inquiryList"></div>
+            </div>
+            <div class="panel">
+              <h3>Inquiry summary</h3>
+              <div class="card-list" id="inquirySummary"></div>
+            </div>
+          </div>
+        </section>
 
-      <section class="admin-section" id="settings">
-        <div class="section-head row">
-          <div>
-            <span>Site settings</span>
-            <h2>Brand and theme</h2>
-            <p>Edit property identity, logos, social links, hero imagery, and theme timing.</p>
+        <section class="admin-section" id="settings">
+          <div class="section-head">
+            <div>
+              <span>Site Settings</span>
+              <h2>Property identity and theme</h2>
+              <p>Edit property name, logo, address, contact information, social links, hero images, and automatic day/night mode.</p>
+            </div>
           </div>
-        </div>
-        <div id="siteSettingsEditor"></div>
-      </section>
+          <div class="grid-2">
+            <div class="panel">
+              <form id="settingsForm" class="admin-form">
+                <div class="form-grid">
+                  <label class="field">Property name
+                    <input id="propertyNameInput" type="text" />
+                  </label>
+                  <label class="field">Logo URL
+                    <input id="logoUrlInput" type="text" placeholder="/assets/logo.png" />
+                  </label>
+                  <label class="field">Address
+                    <input id="addressInput" type="text" />
+                  </label>
+                  <label class="field">Building / unit
+                    <input id="buildingInput" type="text" />
+                  </label>
+                  <label class="field">Contact email
+                    <input id="contactEmailInput" type="email" />
+                  </label>
+                  <label class="field">Contact phone
+                    <input id="contactPhoneInput" type="text" />
+                  </label>
+                  <label class="field">Facebook
+                    <input id="facebookInput" type="text" />
+                  </label>
+                  <label class="field">Instagram
+                    <input id="instagramInput" type="text" />
+                  </label>
+                  <label class="field">TikTok
+                    <input id="tiktokInput" type="text" />
+                  </label>
+                  <label class="field">Website
+                    <input id="websiteInput" type="text" />
+                  </label>
+                  <label class="field">Hero image
+                    <input id="heroImageInput" type="text" />
+                  </label>
+                  <label class="field">Secondary hero image
+                    <input id="heroImage2Input" type="text" />
+                  </label>
+                  <label class="field">Day mode start
+                    <input id="themeStartDayInput" type="time" />
+                  </label>
+                  <label class="field">Night mode start
+                    <input id="themeStartNightInput" type="time" />
+                  </label>
+                </div>
+                <div class="section-actions" style="margin-top:14px;">
+                  <button class="btn btn-primary" type="submit">Save site settings</button>
+                </div>
+              </form>
+            </div>
+            <div class="panel">
+              <h3>Current configuration</h3>
+              <div class="card-list" id="settingsPreview"></div>
+            </div>
+          </div>
+        </section>
 
-      <section class="admin-section hidden" id="developerSection" aria-hidden="true">
-        <div class="section-head row">
-          <div>
-            <span>Developer</span>
-            <h2>Technical maintenance</h2>
-            <p>System checks for authorized administrators only.</p>
+        <section class="admin-section" id="developer">
+          <div class="section-head">
+            <div>
+              <span>Developer</span>
+              <h2>System health</h2>
+              <p>Private maintenance panel with API, database, and email status indicators.</p>
+            </div>
           </div>
-        </div>
-        <div id="developerPanel"></div>
-      </section>
+          <div class="grid-4" id="developerCards"></div>
+        </section>
+      </div>
     </main>
   </div>
 
-  <script type="module" src="./js/admin.js"></script>
+  <div class="modal-backdrop" id="bookingModalBackdrop" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="bookingModalTitle">
+      <button class="dialog-close" type="button" id="closeBookingModal" aria-label="Close booking details">×</button>
+      <div class="badge info">Booking details</div>
+      <h3 id="bookingModalTitle">Booking reference</h3>
+      <div id="bookingModalBody"></div>
+      <div class="dialog-actions">
+        <select id="bookingModalStatus"></select>
+        <button class="btn btn-secondary" id="bookingModalSave" type="button">Save status</button>
+        <button class="btn btn-secondary" id="bookingModalInvite" type="button">Send review invite</button>
+        <button class="btn btn-danger" id="bookingModalCancel" type="button">Cancel booking</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./js/store.js"></script>
+  <script src="./js/admin.js"></script>
 </body>
 </html>

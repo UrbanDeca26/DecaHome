@@ -58,6 +58,21 @@ const DEFAULT_PROPERTY = {
     'Collect your belongings and switch off appliances.',
     'Dispose of trash in the designated area at the back.',
   ],
+  logoUrl: '',
+  heroImage: '',
+  heroImage2: '',
+  themeStartDay: '06:00',
+  themeStartNight: '18:00',
+  socials: { facebook: '', instagram: '', tiktok: '', website: '' },
+  lunaDescription: 'Luxury Stay is a polished condo hideaway for families and friends, with fast self check-in and a practical location near Ortigas.',
+  lunaFaqs: [
+    { q: 'What time is check-in?', a: 'Check-in starts at 1:00 PM.' },
+    { q: 'Do you allow parking?', a: 'Parking is by request and subject to availability.' },
+  ],
+  lunaHouseRules: ['Quiet hours are enforced.', 'No smoking or vaping inside the unit.'],
+  lunaParking: 'Parking is not included by default; please advise early if you need a slot.',
+  lunaContact: 'Use the inquiry form for special requests or questions that need host confirmation.',
+  lunaRecommendations: ['SM East Ortigas', 'Bridgetowne', 'Eastwood', 'Tiendesitas'],
 };
 
 function normalizeTextList(value, fallback) {
@@ -86,6 +101,23 @@ function normalizeProperty(source) {
   out.bookingRequirements = normalizeTextList(src.bookingRequirements, out.bookingRequirements);
   out.selfCheckIn = normalizeTextList(src.selfCheckIn, out.selfCheckIn);
   out.checkout = normalizeTextList(src.checkout, out.checkout);
+  out.logoUrl = String(src.logoUrl || out.logoUrl || '').trim();
+  out.heroImage = String(src.heroImage || out.heroImage || '').trim();
+  out.heroImage2 = String(src.heroImage2 || out.heroImage2 || '').trim();
+  out.themeStartDay = String(src.themeStartDay || out.themeStartDay || '06:00').trim() || '06:00';
+  out.themeStartNight = String(src.themeStartNight || out.themeStartNight || '18:00').trim() || '18:00';
+  out.socials = {
+    facebook: String(src.socials?.facebook || src.facebook || out.socials?.facebook || '').trim(),
+    instagram: String(src.socials?.instagram || src.instagram || out.socials?.instagram || '').trim(),
+    tiktok: String(src.socials?.tiktok || src.tiktok || out.socials?.tiktok || '').trim(),
+    website: String(src.socials?.website || src.website || out.socials?.website || '').trim(),
+  };
+  out.lunaDescription = String(src.lunaDescription || out.lunaDescription || '').trim();
+  out.lunaFaqs = Array.isArray(src.lunaFaqs) ? src.lunaFaqs.map((item) => ({ q: String(item?.q || item?.question || '').trim(), a: String(item?.a || item?.answer || '').trim() })).filter((item) => item.q || item.a) : (Array.isArray(out.lunaFaqs) ? out.lunaFaqs : []);
+  out.lunaHouseRules = normalizeTextList(src.lunaHouseRules, out.lunaHouseRules);
+  out.lunaParking = String(src.lunaParking || out.lunaParking || '').trim();
+  out.lunaContact = String(src.lunaContact || out.lunaContact || '').trim();
+  out.lunaRecommendations = normalizeTextList(src.lunaRecommendations, out.lunaRecommendations);
   return out;
 }
 
@@ -311,6 +343,12 @@ Property facts:
 - Self check-in: ${property.selfCheckIn.join(' | ')}
 - Checkout: ${property.checkout.join(' | ')}
 - Amenities: ${amenities.slice(0, 12).map((a) => `${a.title} (${a.category})`).join(' | ')}
+- Property description: ${property.lunaDescription || '—'}
+- FAQ: ${(property.lunaFaqs || []).slice(0, 5).map((item) => `${item.q} -> ${item.a}`).join(' | ') || '—'}
+- Luna parking info: ${property.lunaParking || '—'}
+- Luna contact info: ${property.lunaContact || '—'}
+- Luna recommendations: ${(property.lunaRecommendations || []).join(', ') || '—'}
+- Luna house rules: ${(property.lunaHouseRules || []).join(' | ') || '—'}
 `.trim();
 
     const payload = {

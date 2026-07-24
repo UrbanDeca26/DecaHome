@@ -79,6 +79,26 @@
       'Collect your belongings and switch off appliances.',
       'Dispose of trash in the designated area at the back.',
     ],
+    logoUrl: '',
+    heroImage: '',
+    heroImage2: '',
+    themeStartDay: '06:00',
+    themeStartNight: '18:00',
+    socials: {
+      facebook: '',
+      instagram: '',
+      tiktok: '',
+      website: '',
+    },
+    lunaDescription: 'Luxury Stay is a polished condo hideaway for families and friends, with fast self check-in and a practical location near Ortigas.',
+    lunaFaqs: [
+      { q: 'What time is check-in?', a: 'Check-in starts at 1:00 PM.' },
+      { q: 'Do you allow parking?', a: 'Parking is by request and subject to availability.' },
+    ],
+    lunaHouseRules: ['Quiet hours are enforced.', 'No smoking or vaping inside the unit.'],
+    lunaParking: 'Parking is not included by default; please advise early if you need a slot.',
+    lunaContact: 'Use the inquiry form for special requests or questions that need host confirmation.',
+    lunaRecommendations: ['SM East Ortigas', 'Bridgetowne', 'Eastwood', 'Tiendesitas'],
   };
 
   const ICONS = {
@@ -167,12 +187,13 @@
   const state = {
     galleryIndex: 0,
     settings: loadJson('luxury_stay_settings_v4', PROPERTY),
-    comments: loadJson('luxury_stay_reviews_v4', DEFAULT_COMMENTS),
+    comments: [],
     media: loadJson('luxury_stay_media_v4', DEFAULT_MEDIA),
     amenities: loadJson('luxury_stay_amenities_v4', DEFAULT_AMENITIES),
     admin: false,
     editingAmenityId: null,
     pendingBookingPricing: null,
+    pendingReview: null,
   };
 
   function loadJson(key, fallback) {
@@ -196,6 +217,96 @@
   function persistMedia() { saveJson('luxury_stay_media_v4', state.media); }
   function persistAmenities() { saveJson('luxury_stay_amenities_v4', state.amenities); }
   function persistSettings() { saveJson('luxury_stay_settings_v4', state.settings); }
+
+  function parseReviewContent(rawValue) {
+    const fallback = { title: 'Verified guest review', message: '' };
+    const raw = String(rawValue || '').trim();
+    if (!raw) return fallback;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          title: String(parsed.title || parsed.reviewTitle || parsed.heading || fallback.title).trim() || fallback.title,
+          message: String(parsed.message || parsed.review || parsed.body || parsed.text || '').trim(),
+        };
+      }
+    } catch (_) {}
+
+    return {
+      title: fallback.title,
+      message: raw,
+    };
+  }
+
+  function normalizeReviewRecord(item = {}) {
+    const reviewParts = parseReviewContent(item.review);
+    const stayDate = String(item.stay_checkout || item.checkout || item.created_at || '').trim();
+    return {
+      id: String(item.id || `review-${Date.now()}`),
+      name: String(item.guest_name || 'Verified Guest').trim() || 'Verified Guest',
+      email: String(item.guest_email || '').trim(),
+      rating: Math.max(1, Math.min(5, Math.round(Number(item.rating || 5) || 5))),
+      title: String(item.review_title || reviewParts.title || 'Verified guest review').trim() || 'Verified guest review',
+      message: String(item.review_message || reviewParts.message || '').trim() || 'A completed guest stay.',
+      stayType: String(item.stay_type || 'Verified guest').trim() || 'Verified guest',
+      bookingRef: String(item.booking_ref || item.bookingRef || '').trim(),
+      stayDate,
+      featured: Boolean(item.featured),
+      hidden: Boolean(item.hidden),
+      verified: item.verified !== false,
+      ts: item.created_at ? (Date.parse(item.created_at) || Date.now()) : Date.now(),
+    };
+  }
+
+  function sortReviews(list) {
+    return list.slice().sort((a, b) => Number(b.featured) - Number(a.featured) || Number(b.ts || 0) - Number(a.ts || 0));
+  }
+
+  async function fetchReviews(endpointMode = 'public') {
+    if (endpointMode === 'admin' && !state.admin) return [];
+    const url = '/api/reviews-list';
+    const init = endpointMode === 'admin'
+      ? {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'list' }),
+        }
+      : { method: 'GET', credentials: 'same-origin' };
+
+    const res = await fetch(url, init);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Failed to load reviews');
+    return Array.isArray(data.reviews) ? data.reviews.map(normalizeReviewRecord) : [];
+  }
+
+  async function loadPublicReviews() {
+    try {
+      state.comments = await fetchReviews('public');
+    } catch (_) {
+      state.comments = [];
+    }
+    persistComments();
+    renderComments();
+    if (state.admin) renderOwnerComments();
+  }
+
+  async function loadAdminReviews() {
+    if (!state.admin) {
+      await loadPublicReviews();
+      return;
+    }
+
+    try {
+      state.comments = await fetchReviews('admin');
+    } catch (_) {
+      state.comments = [];
+    }
+    persistComments();
+    renderComments();
+    renderOwnerComments();
+  }
 
   function readFileAsDataUrl(file) {
     return new Promise((resolve, reject) => {
@@ -313,6 +424,23 @@
     next.bookingRequirements = textareaToList(src.bookingRequirements ? listToTextarea(src.bookingRequirements) : listToTextarea(next.bookingRequirements));
     next.selfCheckIn = textareaToList(src.selfCheckIn ? listToTextarea(src.selfCheckIn) : listToTextarea(next.selfCheckIn));
     next.checkout = textareaToList(src.checkout ? listToTextarea(src.checkout) : listToTextarea(next.checkout));
+    next.logoUrl = String(src.logoUrl || next.logoUrl || '').trim();
+    next.heroImage = String(src.heroImage || next.heroImage || '').trim();
+    next.heroImage2 = String(src.heroImage2 || next.heroImage2 || '').trim();
+    next.themeStartDay = String(src.themeStartDay || next.themeStartDay || '06:00').trim() || '06:00';
+    next.themeStartNight = String(src.themeStartNight || next.themeStartNight || '18:00').trim() || '18:00';
+    next.socials = {
+      facebook: String(src.socials?.facebook || src.facebook || next.socials?.facebook || '').trim(),
+      instagram: String(src.socials?.instagram || src.instagram || next.socials?.instagram || '').trim(),
+      tiktok: String(src.socials?.tiktok || src.tiktok || next.socials?.tiktok || '').trim(),
+      website: String(src.socials?.website || src.website || next.socials?.website || '').trim(),
+    };
+    next.lunaDescription = String(src.lunaDescription || next.lunaDescription || '').trim();
+    next.lunaFaqs = Array.isArray(src.lunaFaqs) ? src.lunaFaqs.map((item) => ({ q: String(item?.q || item?.question || '').trim(), a: String(item?.a || item?.answer || '').trim() })).filter((item) => item.q || item.a) : (Array.isArray(next.lunaFaqs) ? next.lunaFaqs : []);
+    next.lunaHouseRules = textareaToList(src.lunaHouseRules ? listToTextarea(src.lunaHouseRules) : listToTextarea(next.lunaHouseRules));
+    next.lunaParking = String(src.lunaParking || next.lunaParking || '').trim();
+    next.lunaContact = String(src.lunaContact || next.lunaContact || '').trim();
+    next.lunaRecommendations = textareaToList(src.lunaRecommendations ? listToTextarea(src.lunaRecommendations) : listToTextarea(next.lunaRecommendations));
     next.googleMapsUrl = String(src.googleMapsUrl || CONFIG.googleMapsUrl || '').trim();
     next.wazeUrl = String(src.wazeUrl || CONFIG.wazeUrl || '').trim();
     next.hostName = String(src.hostName || 'Donnie').trim() || 'Donnie';
@@ -819,6 +947,7 @@
         </div>
         <label>Nearby places <textarea id="settingsNearby">${escapeHtml(listToTextarea(s.nearby))}</textarea></label>
         <label>Pricing guide <textarea id="settingsPricing">${escapeHtml(listToTextarea(s.pricing))}</textarea></label>
+        <p class="muted">The pricing fields above power the live hero booking card, total calculator, and price details modal.</p>
         <label>Booking requirements <textarea id="settingsBookingRequirements">${escapeHtml(listToTextarea(s.bookingRequirements))}</textarea></label>
         <label>Self check-in steps <textarea id="settingsSelfCheckIn">${escapeHtml(listToTextarea(s.selfCheckIn))}</textarea></label>
         <label>Checkout reminders <textarea id="settingsCheckout">${escapeHtml(listToTextarea(s.checkout))}</textarea></label>
@@ -950,10 +1079,11 @@
   }
 
   function getVisibleComments() {
-    return state.comments
-      .filter((item) => !item.hidden)
-      .slice()
-      .sort((a, b) => Number(b.featured) - Number(a.featured) || Number(b.ts || 0) - Number(a.ts || 0));
+    return sortReviews(state.comments.filter((item) => !item.hidden));
+  }
+
+  function getAllComments() {
+    return sortReviews(state.comments);
   }
 
   function getVisibleAmenities() {
@@ -1099,19 +1229,190 @@
   function renderComments() {
     const list = $('#commentList');
     if (!list) return;
-    const comments = getVisibleComments();
-    list.innerHTML = comments.map((c) => `
-      <article class="comment-card">
-        <div class="comment-top">
-          <div>
-            <strong>${escapeHtml(c.name || 'Guest')}</strong>
-            <span>${escapeHtml(c.stayType || 'Guest')}</span>
+    const reviews = getVisibleComments();
+
+    if (!reviews.length) {
+      list.innerHTML = `
+        <article class="review-card review-empty-card">
+          <div class="review-empty-icon">★</div>
+          <div class="review-empty-copy">
+            <span class="review-badge">Verified guest reviews</span>
+            <h3>No verified reviews yet</h3>
+            <p>Once a completed guest submits a verified review, it will appear here.</p>
           </div>
-          <div class="comment-stars">${'★'.repeat(Number(c.rating || 5))}${'☆'.repeat(5 - Number(c.rating || 5))}</div>
-        </div>
-        <p style="margin:0; color: var(--muted); line-height:1.7;">${escapeHtml(c.text || '')}</p>
-      </article>
-    `).join('');
+        </article>
+      `;
+      return;
+    }
+
+    list.innerHTML = reviews.map((review) => {
+      const stars = '★'.repeat(Number(review.rating || 5)) + '☆'.repeat(Math.max(0, 5 - Number(review.rating || 5)));
+      return `
+        <article class="review-card ${review.featured ? 'is-featured' : ''}">
+          <div class="review-card-head">
+            <div>
+              <span class="review-badge">Verified guest</span>
+              <h3>${escapeHtml(review.title || 'Verified guest review')}</h3>
+            </div>
+            <div class="review-stars" aria-label="${escapeHtml(String(review.rating || 5))} star rating">${stars}</div>
+          </div>
+          <p class="review-card-text">${escapeHtml(review.message || '')}</p>
+          <div class="review-card-meta">
+            <div>
+              <strong>${escapeHtml(review.name || 'Verified Guest')}</strong>
+              <span>${escapeHtml(review.stayDate ? formatBookingDisplayDate(review.stayDate) : 'Completed stay')}</span>
+            </div>
+            <span class="review-card-ref">${review.bookingRef ? `Ref ${escapeHtml(review.bookingRef)}` : 'Completed stay'}</span>
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function scrollReviewCarousel(direction = 1) {
+    const carousel = $('#reviewCarousel');
+    if (!carousel) return;
+    const amount = Math.max(320, Math.floor(carousel.clientWidth * 0.85));
+    carousel.scrollBy({ left: amount * direction, behavior: 'smooth' });
+  }
+
+  function setReviewModalStage(stage) {
+    const verify = $('#reviewStepVerify');
+    const compose = $('#reviewStepCompose');
+    const success = $('#reviewStepSuccess');
+    if (verify) verify.classList.toggle('hidden', stage !== 'verify');
+    if (compose) compose.classList.toggle('hidden', stage !== 'compose');
+    if (success) success.classList.toggle('hidden', stage !== 'success');
+  }
+
+  function openReviewModal(prefill = {}) {
+    const modal = $('#reviewVerifyModal');
+    if (!modal) return;
+    $('#reviewVerifyForm')?.reset();
+    $('#reviewSubmitForm')?.reset();
+    setReviewModalStage('verify');
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+
+    const reviewRef = String(prefill.reviewRef || prefill.bookingRef || '').trim();
+    const reviewToken = String(prefill.reviewToken || '').trim();
+    if (reviewRef) $('#reviewBookingRef').value = reviewRef;
+    if (reviewToken) $('#reviewToken').value = reviewToken;
+    if (reviewRef && reviewToken) window.setTimeout(() => $('#reviewVerifyBtn')?.focus(), 50);
+    else window.setTimeout(() => $('#reviewBookingRef')?.focus(), 50);
+  }
+
+  function closeReviewModal() {
+    const modal = $('#reviewVerifyModal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    $('#reviewVerifyForm')?.reset();
+    $('#reviewSubmitForm')?.reset();
+    state.pendingReview = null;
+    setReviewModalStage('verify');
+  }
+
+  function maybePrefillReviewModalFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    const reviewRef = params.get('reviewRef') || params.get('bookingRef');
+    const reviewToken = params.get('reviewToken');
+    if (reviewRef || reviewToken) {
+      openReviewModal({ reviewRef, reviewToken });
+    }
+  }
+
+  async function verifyReviewBooking(e) {
+    e.preventDefault();
+    const bookingRef = String($('#reviewBookingRef')?.value || '').trim();
+    const reviewToken = String($('#reviewToken')?.value || '').trim();
+    if (!bookingRef || !reviewToken) {
+      alert('Please enter your booking reference and review token.');
+      return;
+    }
+
+    const btn = $('#reviewVerifyBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+    }
+
+    try {
+      const res = await fetch('/api/reviews-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingRef, reviewToken }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Booking could not be verified');
+
+      state.pendingReview = data;
+      $('#reviewVerifiedBookingRefInput').value = data.bookingRef || bookingRef;
+      $('#reviewVerifiedTokenInput').value = reviewToken;
+      $('#reviewGuestName').value = data.guestName || '';
+      $('#reviewGuestEmail').value = data.guestEmail || '';
+      $('#reviewRating').value = '5';
+      $('#reviewTitle').value = '';
+      $('#reviewMessage').value = '';
+      $('#reviewVerifiedRef').textContent = data.bookingRef || bookingRef;
+      $('#reviewVerifiedStay').textContent = data.checkout ? formatBookingDisplayDate(data.checkout) : 'Completed stay';
+      $('#reviewVerifiedGuest').textContent = data.guestName || 'Verified Guest';
+      $('#reviewVerifiedEmail').textContent = data.guestEmail || '—';
+      setReviewModalStage('compose');
+      window.setTimeout(() => $('#reviewTitle')?.focus(), 50);
+    } catch (err) {
+      alert(err.message || 'Could not verify booking');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Verify booking';
+      }
+    }
+  }
+
+  async function submitVerifiedReview(e) {
+    e.preventDefault();
+    const payload = {
+      bookingReference: String($('#reviewVerifiedBookingRefInput')?.value || $('#reviewBookingRef')?.value || '').trim(),
+      reviewToken: String($('#reviewVerifiedTokenInput')?.value || $('#reviewToken')?.value || '').trim(),
+      guestName: String($('#reviewGuestName')?.value || '').trim(),
+      guestEmail: String($('#reviewGuestEmail')?.value || '').trim(),
+      rating: Number($('#reviewRating')?.value || 5),
+      reviewTitle: String($('#reviewTitle')?.value || '').trim(),
+      reviewMessage: String($('#reviewMessage')?.value || '').trim(),
+    };
+
+    if (!payload.reviewTitle || !payload.reviewMessage) {
+      alert('Please add a review title and review message.');
+      return;
+    }
+
+    const btn = $('#reviewSubmitBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+    }
+
+    try {
+      const res = await fetch('/api/reviews-submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Review submission failed');
+
+      setReviewModalStage('success');
+      state.pendingReview = null;
+      await loadPublicReviews();
+    } catch (err) {
+      alert(err.message || 'Could not submit review');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Submit review';
+      }
+    }
   }
 
   function pushChat(role, text) {
@@ -1229,7 +1530,19 @@
       return `We are at ${settings.building}. Nearby places include SM East Ortigas, Bridgetowne, SM Megamall, Robinsons Galleria, Medical City, Tiendesitas, and Eastwood.`;
     }
     if (/parking/.test(q)) {
-      return `Parking is by request. Rates are Car: ${settings.parkingRates.car} and Motorcycle: ${settings.parkingRates.motorcycle}. Please advise early if you need parking.`;
+      return settings.lunaParking || `Parking is by request. Rates are Car: ${settings.parkingRates.car} and Motorcycle: ${settings.parkingRates.motorcycle}. Please advise early if you need parking.`;
+    }
+    if (/(description|about|property)/.test(q)) {
+      return settings.lunaDescription || `Luxury Stay is at ${settings.building}.`; 
+    }
+    if (/(faq|question|answer)/.test(q) && Array.isArray(settings.lunaFaqs) && settings.lunaFaqs.length) {
+      return settings.lunaFaqs.slice(0, 2).map((item) => `${item.q}: ${item.a}`).join(' ');
+    }
+    if (/(recommend|nearby|local|recommendations)/.test(q)) {
+      return `Nearby recommendations include: ${(settings.lunaRecommendations || []).join(' · ')}.`;
+    }
+    if (/(contact|host|email|message)/.test(q)) {
+      return settings.lunaContact || `Use the inquiry form below to send your message to the host.`;
     }
     if (/(price|rate|cost|pricing)/.test(q)) {
       return `Pricing is calculated live from the booking card. Weekdays: ${formatCurrency(settings.weekdayRate)} · Weekends: ${formatCurrency(settings.weekendRate)} · Included guests: ${settings.includedGuests} · Extra guest fee: ${formatCurrency(settings.extraGuestFee)} · Pet fee: ${formatCurrency(settings.petFee)}.`;
@@ -1260,9 +1573,6 @@
     }
     if (/(children|kids|birthday|decorate|pets|pet|late checkout|early check-in|midnight)/.test(q)) {
       return `I could not find that detail on the site yet. Please send a message to the host using the inquiry form below.`;
-    }
-    if (/(contact|host|email|message)/.test(q)) {
-      return `Use the inquiry form below to send your message to the host.`;
     }
     return `I can answer questions about the stay here. If I do not have the detail on the site, I can send an inquiry to the host.`;
   }
@@ -1330,6 +1640,18 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to send inquiry');
 
+      const inquiries = JSON.parse(localStorage.getItem('luxury_stay_inquiries_v1') || '[]');
+      inquiries.unshift({
+        id: `inq-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name: payload.name,
+        email: payload.email,
+        phone: payload.phone,
+        topic: payload.topic,
+        message: payload.message,
+        status: 'pending',
+        ts: Date.now(),
+      });
+      localStorage.setItem('luxury_stay_inquiries_v1', JSON.stringify(inquiries.slice(0, 200)));
       pushChat('bot', 'Thanks — your inquiry has been sent to the host.');
       closeInquiryForm();
       renderChatSuggestions([
@@ -1717,11 +2039,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
   }
 
   function openOwnerLogin() {
-    const modal = $('#ownerLoginModal');
-    if (!modal) return;
-    modal.classList.add('open');
-    modal.setAttribute('aria-hidden', 'false');
-    setTimeout(() => $('#ownerPassword')?.focus(), 50);
+    window.location.href = '/admin/login.html';
   }
 
   function closeOwnerLogin() {
@@ -1735,7 +2053,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
 
   function ensureOwnerSectionVisible() {
     const panel = $('#ownerPanel');
-    if (panel) panel.classList.toggle('hidden', !state.admin);
+    if (panel) panel.classList.add('hidden');
   }
 
   async function syncAdminStatus() {
@@ -1748,7 +2066,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     }
     ensureOwnerSectionVisible();
     renderOwnerSettings();
-    renderOwnerComments();
+    if (state.admin) await loadAdminReviews(); else await loadPublicReviews();
     renderOwnerMedia();
     renderOwnerAmenities();
   }
@@ -1774,7 +2092,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
       state.admin = true;
       ensureOwnerSectionVisible();
       renderOwnerSettings();
-      renderOwnerComments();
+      await loadAdminReviews();
       renderOwnerMedia();
       renderOwnerAmenities();
       closeOwnerLogin();
@@ -1795,7 +2113,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     state.admin = false;
     ensureOwnerSectionVisible();
     renderOwnerSettings();
-    renderOwnerComments();
+    await loadPublicReviews();
     renderOwnerMedia();
     renderOwnerAmenities();
   }
@@ -1843,114 +2161,128 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     renderOwnerComments();
   }
 
-  function deleteComment(id) {
+  async function moderateReview(action, id) {
+    if (!id) return;
+    const res = await fetch('/api/reviews-list', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Could not update review');
+    await loadAdminReviews();
+  }
+
+  async function deleteComment(id) {
     const item = state.comments.find((comment) => comment.id === id);
     if (!item) return;
     if (!window.confirm(`Delete review from ${item.name}?`)) return;
-    state.comments = state.comments.filter((comment) => comment.id !== id);
-    persistComments();
-    renderComments();
-    renderOwnerComments();
+    await moderateReview('delete', id);
   }
 
-  function toggleCommentFeature(id) {
-    state.comments = state.comments.map((comment) => ({ ...comment, featured: comment.id === id }));
-    persistComments();
-    renderComments();
-    renderOwnerComments();
+  async function toggleCommentFeature(id) {
+    await moderateReview('feature', id);
   }
 
-  function toggleCommentHidden(id) {
-    const item = state.comments.find((comment) => comment.id === id);
-    if (!item) return;
-    item.hidden = !item.hidden;
-    persistComments();
-    renderComments();
-    renderOwnerComments();
+  async function toggleCommentHidden(id) {
+    await moderateReview('toggle-hidden', id);
   }
 
   function renderOwnerComments() {
     const list = $('#ownerReviewList');
     if (!list) return;
     if (!state.admin) {
-      list.innerHTML = '<div class="owner-empty">Sign in to manage guest comments.</div>';
+      list.innerHTML = '<div class="owner-empty">Sign in to manage verified guest reviews.</div>';
       return;
     }
 
-    const comments = state.comments.slice().sort((a, b) => Number(b.ts || 0) - Number(a.ts || 0));
-    list.innerHTML = `
-      <form class="owner-form" id="ownerReviewForm">
-        <h4>Add a review</h4>
-        <label>Guest name <input id="ownerCommentName" type="text" placeholder="Guest name" /></label>
-        <div class="owner-row">
-          <label>Rating
-            <select id="ownerCommentRating">
-              <option value="5">5 stars</option>
-              <option value="4">4 stars</option>
-              <option value="3">3 stars</option>
-              <option value="2">2 stars</option>
-              <option value="1">1 star</option>
-            </select>
-          </label>
-          <label>Stay type <input id="ownerCommentStayType" type="text" placeholder="Family trip" /></label>
+    const comments = getAllComments();
+    if (!comments.length) {
+      list.innerHTML = `
+        <form class="owner-form review-invite-form" id="ownerReviewInviteForm">
+          <h4>Send review invitation</h4>
+          <label>Booking reference <input id="ownerReviewInviteRef" type="text" placeholder="LS-20260724-0001" /></label>
+          <button class="btn btn-primary full" type="submit">Send invitation</button>
+          <p class="muted">Use this after checkout to email the guest their verified review link.</p>
+        </form>
+        <div class="owner-empty">No verified reviews have been submitted yet.</div>
+      `;
+    } else {
+      list.innerHTML = `
+        <form class="owner-form review-invite-form" id="ownerReviewInviteForm">
+          <h4>Send review invitation</h4>
+          <label>Booking reference <input id="ownerReviewInviteRef" type="text" placeholder="LS-20260724-0001" /></label>
+          <button class="btn btn-primary full" type="submit">Send invitation</button>
+          <p class="muted">Use this after checkout to email the guest their verified review link.</p>
+        </form>
+
+        <div class="owner-list">
+          ${comments.map((comment) => {
+            const stars = '★'.repeat(Number(comment.rating || 5)) + '☆'.repeat(Math.max(0, 5 - Number(comment.rating || 5)));
+            return `
+              <article class="owner-item ${comment.hidden ? 'is-hidden' : ''} ${comment.featured ? 'is-featured' : ''}">
+                <div class="owner-item-head">
+                  <div>
+                    <strong>${escapeHtml(comment.name || 'Verified Guest')}</strong>
+                    <span>${escapeHtml(comment.bookingRef ? `Ref ${comment.bookingRef}` : comment.stayDate ? formatBookingDisplayDate(comment.stayDate) : 'Completed stay')}</span>
+                  </div>
+                  <div>
+                    <div class="comment-stars">${stars}</div>
+                    <span class="owner-pill" style="margin-top:8px; display:inline-flex;">${comment.featured ? 'Featured' : 'Verified'}</span>
+                  </div>
+                </div>
+                <h4 style="margin:0 0 8px; font-size:1.02rem;">${escapeHtml(comment.title || 'Verified guest review')}</h4>
+                <p>${escapeHtml(comment.message || '')}</p>
+                <div class="owner-actions-row">
+                  <button class="btn btn-secondary owner-sm" data-act="toggle-comment" data-id="${escapeHtml(comment.id)}">${comment.hidden ? 'Restore' : 'Hide'}</button>
+                  <button class="btn btn-secondary owner-sm" data-act="feature-comment" data-id="${escapeHtml(comment.id)}">Feature</button>
+                  <button class="btn btn-secondary owner-sm danger" data-act="delete-comment" data-id="${escapeHtml(comment.id)}">Delete</button>
+                </div>
+              </article>
+            `;
+          }).join('')}
         </div>
-        <label>Comment <textarea id="ownerCommentText" placeholder="What should future guests see?"></textarea></label>
-        <button class="btn btn-primary full" type="submit">Add review</button>
-      </form>
+      `;
+    }
 
-      <div class="owner-list">
-        ${comments.map((comment) => `
-          <article class="owner-item ${comment.hidden ? 'is-hidden' : ''} ${comment.featured ? 'is-featured' : ''}">
-            <div class="owner-item-head">
-              <div>
-                <strong>${escapeHtml(comment.name || 'Guest')}</strong>
-                <span>${escapeHtml(comment.stayType || 'Guest')}</span>
-              </div>
-              <div class="comment-stars">${'★'.repeat(Number(comment.rating || 5))}${'☆'.repeat(5 - Number(comment.rating || 5))}</div>
-            </div>
-            <p>${escapeHtml(comment.text || '')}</p>
-            <div class="owner-actions-row">
-              <button class="btn btn-secondary owner-sm" data-act="edit-comment" data-id="${escapeHtml(comment.id)}">Edit</button>
-              <button class="btn btn-secondary owner-sm" data-act="toggle-comment" data-id="${escapeHtml(comment.id)}">${comment.hidden ? 'Restore' : 'Hide'}</button>
-              <button class="btn btn-secondary owner-sm" data-act="feature-comment" data-id="${escapeHtml(comment.id)}">Feature</button>
-              <button class="btn btn-secondary owner-sm danger" data-act="delete-comment" data-id="${escapeHtml(comment.id)}">Delete</button>
-            </div>
-          </article>
-        `).join('')}
-      </div>
-    `;
-
-    $('#ownerReviewForm')?.addEventListener('submit', (e) => {
+    $('#ownerReviewInviteForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const name = String($('#ownerCommentName')?.value || '').trim();
-      const rating = Number($('#ownerCommentRating')?.value || 5);
-      const stayType = String($('#ownerCommentStayType')?.value || '').trim() || 'Guest';
-      const text = String($('#ownerCommentText')?.value || '').trim();
-      if (!name || !text) return;
-      state.comments.unshift({
-        id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        name,
-        rating: Math.max(1, Math.min(5, Number.isFinite(rating) ? rating : 5)),
-        stayType,
-        text,
-        ts: Date.now(),
-        featured: false,
-        hidden: false,
-        source: 'admin',
-      });
-      persistComments();
-      renderComments();
-      renderOwnerComments();
+      const bookingRef = String($('#ownerReviewInviteRef')?.value || '').trim();
+      if (!bookingRef) return;
+      const btn = e.currentTarget.querySelector('button[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+      }
+      try {
+        const res = await fetch('/api/reviews-invite', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingRef }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Failed to send review invitation');
+        alert('Review invitation sent.');
+        e.currentTarget.reset();
+      } catch (err) {
+        alert(err.message || 'Failed to send review invitation');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Send invitation';
+        }
+      }
     });
 
     $$('#ownerReviewList [data-act]').forEach((button) => {
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         const id = button.dataset.id;
         const act = button.dataset.act;
-        if (act === 'edit-comment') addOrEditComment(id);
-        if (act === 'toggle-comment') toggleCommentHidden(id);
-        if (act === 'feature-comment') toggleCommentFeature(id);
-        if (act === 'delete-comment') deleteComment(id);
+        if (act === 'toggle-comment') await toggleCommentHidden(id);
+        if (act === 'feature-comment') await toggleCommentFeature(id);
+        if (act === 'delete-comment') await deleteComment(id);
       });
     });
   }
@@ -2251,29 +2583,27 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
       if (e.target.id === 'guideModal') closeGuideModal();
     });
 
-    $('#commentForm')?.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const name = String($('#commentName')?.value || '').trim();
-      const rating = Number($('#commentRating')?.value || 5);
-      const stayType = String($('#commentStayType')?.value || '').trim();
-      const text = String($('#commentText')?.value || '').trim();
-      if (!name || !text) return;
-      state.comments.unshift({
-        id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        name,
-        rating: Number.isFinite(rating) ? rating : 5,
-        stayType: stayType || 'Guest',
-        text,
-        ts: Date.now(),
-        featured: false,
-        hidden: false,
-        source: 'guest',
-      });
-      state.comments = state.comments.slice(0, 40);
-      persistComments();
-      renderComments();
-      renderOwnerComments();
-      e.target.reset();
+    $('#leaveVerifiedReview')?.addEventListener('click', () => openReviewModal());
+    $('#reviewPrev')?.addEventListener('click', () => scrollReviewCarousel(-1));
+    $('#reviewNext')?.addEventListener('click', () => scrollReviewCarousel(1));
+    $('#reviewCarousel')?.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        scrollReviewCarousel(-1);
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        scrollReviewCarousel(1);
+      }
+    });
+    $('#closeReviewModal')?.addEventListener('click', closeReviewModal);
+    $('#reviewCancel')?.addEventListener('click', closeReviewModal);
+    $('#reviewBack')?.addEventListener('click', () => setReviewModalStage('verify'));
+    $('#closeReviewSuccess')?.addEventListener('click', closeReviewModal);
+    $('#reviewVerifyForm')?.addEventListener('submit', verifyReviewBooking);
+    $('#reviewSubmitForm')?.addEventListener('submit', submitVerifiedReview);
+    $('#reviewVerifyModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'reviewVerifyModal') closeReviewModal();
     });
 
     $('#openAllPhotos')?.addEventListener('click', () => {
@@ -2334,9 +2664,10 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
       if (e.key === 'Escape') {
         if ($('.guide-modal.open')) closeGuideModal();
         if ($('.lightbox.open')) closeLightbox();
-        if ($('.site-modal.open')) closeAmenitiesModal();
-        if ($('#bookingConfirmModal')?.classList.contains('open')) closeBookingConfirmModal();
-        if ($('#priceDetailsModal')?.classList.contains('open')) closePriceDetailsModal();
+        if ($('#reviewVerifyModal')?.classList.contains('open')) closeReviewModal();
+        else if ($('#bookingConfirmModal')?.classList.contains('open')) closeBookingConfirmModal();
+        else if ($('#priceDetailsModal')?.classList.contains('open')) closePriceDetailsModal();
+        else if ($('.site-modal.open')) closeAmenitiesModal();
       }
       if (!$('.lightbox.open')) return;
       if (e.key === 'ArrowLeft') stepLightbox(-1);
@@ -2377,6 +2708,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     renderVideos();
     renderAmenities();
     renderComments();
+    loadPublicReviews();
     renderChatSuggestions(LUNA_DEFAULT_SUGGESTIONS);
     setBookingDateBounds();
     updateBookingPricingUI();
@@ -2385,6 +2717,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     setupRevealObserver();
     bindPublicEvents();
     bindOwnerEvents();
+    maybePrefillReviewModalFromQuery();
     ensureOwnerSectionVisible();
     syncAdminStatus();
   }

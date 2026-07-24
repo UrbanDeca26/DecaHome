@@ -4,38 +4,32 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Luxury Stay Admin Login</title>
-  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#f3efe7" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="../style.css" />
   <link rel="stylesheet" href="./css/admin.css" />
 </head>
-<body class="admin-page admin-login-page">
+<body>
   <main class="login-shell">
     <section class="login-card">
-      <div class="admin-brand login-brand">
-        <div class="admin-brand-mark">LS</div>
+      <div class="brand-line">
+        <div class="mark">LS</div>
         <div>
           <strong>Luxury Stay</strong>
-          <small>Admin Portal</small>
+          <span class="muted">Admin access portal</span>
         </div>
       </div>
-      <span class="section-pill">Private access</span>
-      <h1>Sign in to the dashboard</h1>
-      <p>Hidden access remains available for authorized administrators only.</p>
-      <form id="loginForm" class="login-form">
-        <label>
-          Admin password
-          <input id="password" type="password" autocomplete="current-password" placeholder="Enter password" required />
+      <h1>Owner login</h1>
+      <p>Enter the hidden password to open the management dashboard.</p>
+      <form id="adminLoginForm" class="admin-form">
+        <label class="field">Password
+          <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Enter password" required />
         </label>
-        <button class="btn btn-primary full" id="loginBtn" type="submit">Sign in</button>
+        <button class="btn btn-primary full" type="submit">Sign in</button>
       </form>
-      <div class="login-footer">
-        <a href="../index.html">Back to public website</a>
-      </div>
-      <p class="login-note">Authenticated users are redirected to the dashboard automatically.</p>
     </section>
   </main>
 
-  <script type="module" src="./js/login.js"></script>
+  <script src="./js/store.js"></script>
+  <script src="./js/login.js"></script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
 let getSupabase = null;
@@ -55,6 +56,17 @@ function generateBookingRef() {
   return `LS-${y}${m}${d}-${time}${rand}`;
 }
 
+function generateReviewToken() {
+  return `RV-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
+
+function getBaseUrl(req) {
+  const proto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim() || 'http';
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  if (!host) return '';
+  return `${proto}://${host}`;
+}
+
 module.exports = async function handler(req, res) {
   try {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -72,6 +84,9 @@ module.exports = async function handler(req, res) {
     const note = String(body.note || '').trim();
     const pricing = body.pricing && typeof body.pricing === 'object' ? body.pricing : null;
     const bookingRef = generateBookingRef();
+    const reviewToken = generateReviewToken();
+    const baseUrl = getBaseUrl(req);
+    const reviewLink = baseUrl ? `${baseUrl}/?reviewRef=${encodeURIComponent(bookingRef)}&reviewToken=${encodeURIComponent(reviewToken)}#reviews` : '';
 
     if (!guestName || !guestEmail || !checkin || !checkout || !guests) {
       return res.status(400).json({ error: 'Missing booking details' });
@@ -106,6 +121,9 @@ module.exports = async function handler(req, res) {
           pricing,
           total: pricing ? Number(pricing.total ?? pricing.summary?.total ?? 0) : null,
           status: 'pending',
+          review_token: reviewToken,
+          review_submitted: false,
+          review_invitation_sent: false,
           created_at: new Date().toISOString(),
         };
         const { error: bookingError } = await supabase.from('bookings').insert([bookingRow]);
@@ -141,6 +159,8 @@ module.exports = async function handler(req, res) {
       `Pets: ${pets || 0}`,
       `Phone: ${guestPhone || '—'}`,
       `Special request: ${note || '—'}`,
+      `Review token: ${reviewToken}`,
+      reviewLink ? `Review link: ${reviewLink}` : 'Review link: —',
       '',
       'Price breakdown',
       `Base rate: ${formatCurrency(baseRate)}`,
@@ -184,6 +204,8 @@ module.exports = async function handler(req, res) {
         <p><strong>Pets:</strong> ${esc(pets || 0)}</p>
         <p><strong>Phone:</strong> ${esc(guestPhone || '—')}</p>
         <p><strong>Special request:</strong><br>${esc(note || '—').replace(/\n/g, '<br>')}</p>
+        <p><strong>Review token:</strong> ${esc(reviewToken)}</p>
+        ${reviewLink ? `<p><strong>Review link:</strong> <a href="${esc(reviewLink)}" target="_blank" rel="noopener noreferrer">Leave a verified review</a></p>` : ''}
         <h3 style="margin:18px 0 10px">Price breakdown</h3>
         <p><strong>Base rate:</strong> ${esc(formatCurrency(baseRate))}</p>
         <p><strong>Extra guests:</strong> ${esc(formatCurrency(extraGuestCharge))}</p>
@@ -204,6 +226,8 @@ module.exports = async function handler(req, res) {
         <p><strong>Guests:</strong> ${esc(guests)}</p>
         <p><strong>Pets:</strong> ${esc(pets || 0)}</p>
         <p><strong>Special request:</strong><br>${esc(note || '—').replace(/\n/g, '<br>')}</p>
+        <p><strong>Review token:</strong> ${esc(reviewToken)}</p>
+        ${reviewLink ? `<p><strong>Review link:</strong> <a href="${esc(reviewLink)}" target="_blank" rel="noopener noreferrer">Send verified review invitation</a></p>` : ''}
         <h3 style="margin:18px 0 10px">Price breakdown</h3>
         <p><strong>Base rate:</strong> ${esc(formatCurrency(baseRate))}</p>
         <p><strong>Extra guests:</strong> ${esc(formatCurrency(extraGuestCharge))}</p>
@@ -230,7 +254,7 @@ module.exports = async function handler(req, res) {
       }),
     ]);
 
-    return res.status(200).json({ ok: true, bookingRef, persistedBooking });
+    return res.status(200).json({ ok: true, bookingRef, reviewToken, reviewLink, persistedBooking });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Failed to send booking inquiry' });
   }
