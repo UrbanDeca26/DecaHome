@@ -206,6 +206,7 @@
     comments: [],
     media: loadJson('luxury_stay_media_v4', DEFAULT_MEDIA),
     amenities: loadJson('luxury_stay_amenities_v4', DEFAULT_AMENITIES),
+    blockedDates: loadBlockedDates(),
     admin: false,
     editingAmenityId: null,
     pendingBookingPricing: null,
@@ -230,10 +231,48 @@
     } catch (_) {}
   }
 
+  function loadBlockedDates() {
+    try {
+      const raw = localStorage.getItem('luxury_stay_blocked_dates_v1');
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((item) => {
+        if (typeof item === 'string') return { date: item, type: 'blocked', note: '' };
+        if (item && typeof item === 'object') {
+          return {
+            date: String(item.date || item.value || '').trim(),
+            type: String(item.type || 'blocked').trim() || 'blocked',
+            note: String(item.note || '').trim(),
+          };
+        }
+        return null;
+      }).filter((item) => item && item.date);
+    } catch (_) {
+      return [];
+    }
+  }
+
   function persistComments() { saveJson('luxury_stay_reviews_v4', state.comments); }
   function persistMedia() { saveJson('luxury_stay_media_v4', state.media); }
   function persistAmenities() { saveJson('luxury_stay_amenities_v4', state.amenities); }
   function persistSettings() { saveJson('luxury_stay_settings_v4', state.settings); }
+
+  function blockedDateSet() {
+    return new Set((state.blockedDates || []).map((item) => String(item?.date || '').trim()).filter(Boolean));
+  }
+
+  function bookingHasBlockedDate(checkin, checkout) {
+    const start = parseBookingDate(checkin);
+    const end = parseBookingDate(checkout);
+    if (!start || !end) return false;
+    const blocked = blockedDateSet();
+    if (!blocked.size) return false;
+    for (let cursor = start; cursor < end; cursor = addUtcDays(cursor, 1)) {
+      if (blocked.has(toISODate(cursor))) return true;
+    }
+    return false;
+  }
 
   function parseReviewContent(rawValue) {
     const fallback = { title: 'Verified guest review', message: '' };
@@ -329,6 +368,7 @@
     state.settings = normalizeSettings(loadJson('luxury_stay_settings_v4', PROPERTY));
     state.media = loadJson('luxury_stay_media_v4', DEFAULT_MEDIA);
     state.amenities = loadJson('luxury_stay_amenities_v4', DEFAULT_AMENITIES);
+    state.blockedDates = loadBlockedDates();
 
     applySettingsToPublicUI();
     renderGuide();
@@ -410,6 +450,14 @@
     const next = new Date(date.getTime());
     next.setUTCDate(next.getUTCDate() + days);
     return next;
+  }
+
+  function toISODate(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   function isWeekendDate(date) {
@@ -535,6 +583,10 @@
     const today = parseBookingDate(getTodayLocalISO());
     if (today && start < today) {
       return { valid: false, error: 'Check-in date cannot be in the past.' };
+    }
+
+    if (bookingHasBlockedDate(checkin, checkout)) {
+      return { valid: false, error: 'Selected dates include blocked or reserved days. Please choose another stay period.' };
     }
 
     let baseRate = 0;

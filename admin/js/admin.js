@@ -25,6 +25,7 @@
     iconLibraryOpen: false,
     iconSelectionMode: 'auto',
     selectedBooking: null,
+    selectedCalendarDate: '',
     developerHealth: {
       auth: 'Unknown',
       bookings: 'Unknown',
@@ -580,6 +581,7 @@
     const grid = $('#calendarGrid');
     const title = $('#calendarTitle');
     const blockedList = $('#blockedDatesList');
+    const reservedList = $('#reservedDatesList');
     if (!grid || !title || !blockedList) return;
 
     const monthStart = state.calendarMonth;
@@ -615,9 +617,9 @@
       const dateIso = toISODate(date);
       const isToday = dateIso === toISODate(new Date());
       const data = blocked[dateIso];
+      const selected = state.selectedCalendarDate === dateIso;
       let label = 'Available';
       let cls = 'calendar-day';
-      let isReserved = false;
       if (data) {
         label = data.type || 'Blocked';
         cls += ` is-${data.type || 'blocked'}`;
@@ -628,13 +630,15 @@
           return !Number.isNaN(checkin.getTime()) && !Number.isNaN(checkout.getTime()) && date >= checkin && date < checkout && String(item.status || '').toLowerCase() !== 'cancelled';
         });
         if (booking) {
-          label = booking.status || 'Reserved';
+          label = 'Reserved';
           cls += ' is-reserved';
-          isReserved = true;
         }
       }
+      if (selected) cls += ' is-selected';
       if (isToday) cls += ' is-today';
-      const titleText = `${dateIso} — ${label}${data?.note ? ` · ${data.note}` : ''}`;
+      const titleText = data
+        ? `${dateIso} — ${label}${data.note ? ` · ${data.note}` : ''}`
+        : `${dateIso} — ${label}`;
       cells.push(`
         <button class="${cls}" data-calendar-date="${dateIso}" type="button" title="${S.escapeHtml(titleText)}" aria-label="${S.escapeHtml(titleText)}">
           <span class="day-num">${day}</span>
@@ -658,12 +662,42 @@
           <button class="btn btn-secondary small" data-remove-block="${S.escapeHtml(item.date)}" type="button">Remove</button>
         </div>
       </div>
-    `).join('') : '<div class="admin-empty">No blocked dates set.</div>';
+    `).join('') : '<div class="admin-empty">No owner blocks set.</div>';
+
+    if (reservedList) {
+      const reservedEntries = bookingsInMonth
+        .slice()
+        .sort((a, b) => String(a.checkin || '').localeCompare(String(b.checkin || '')))
+        .slice(0, 12);
+      reservedList.innerHTML = reservedEntries.length ? reservedEntries.map((booking) => `
+        <div class="card-item">
+          <div class="card-item-head">
+            <div>
+              <strong>${S.escapeHtml(booking.booking_ref || 'Reserved stay')}</strong>
+              <span>${S.escapeHtml(S.formatDate(booking.checkin))} → ${S.escapeHtml(S.formatDate(booking.checkout))}</span>
+            </div>
+            <span class="badge reserved">Reserved</span>
+          </div>
+          <div class="muted">Automatic booking. Status: ${S.escapeHtml(String(booking.status || 'pending'))}</div>
+        </div>
+      `).join('') : '<div class="admin-empty">No reserved dates in this month.</div>';
+    }
 
     $$('#calendarGrid [data-calendar-date]').forEach((button) => {
       button.addEventListener('click', () => {
         if (button.classList.contains('is-reserved')) return;
-        toggleBlockDate(button.dataset.calendarDate);
+        const dateIso = button.dataset.calendarDate;
+        state.selectedCalendarDate = dateIso;
+        const input = $('#blockDateInput');
+        if (input) input.value = dateIso;
+        const existing = state.blockedDates.find((item) => item.date === dateIso);
+        const typeInput = $('#blockDateType');
+        const noteInput = $('#blockDateNote');
+        if (existing) {
+          if (typeInput) typeInput.value = existing.type || 'blocked';
+          if (noteInput) noteInput.value = existing.note || '';
+        }
+        renderCalendar();
       });
     });
     $$('#blockedDatesList [data-remove-block]').forEach((button) => {
@@ -672,13 +706,24 @@
   }
 
   function toggleBlockDate(dateIso) {
-    const existing = state.blockedDates.find((item) => item.date === dateIso);
-    if (existing) {
-      state.blockedDates = state.blockedDates.filter((item) => item.date !== dateIso);
+    const existingIndex = state.blockedDates.findIndex((item) => item.date === dateIso);
+    if (existingIndex >= 0) {
+      const current = state.blockedDates[existingIndex];
+      state.blockedDates[existingIndex] = {
+        ...current,
+        date: dateIso,
+        type: String($('#blockDateType')?.value || current.type || 'blocked').trim() || 'blocked',
+        note: String($('#blockDateNote')?.value || current.note || '').trim(),
+      };
     } else {
-      state.blockedDates.unshift({ date: dateIso, type: $('#blockDateType')?.value || 'blocked', note: $('#blockDateNote')?.value || '' });
+      state.blockedDates.unshift({
+        date: dateIso,
+        type: String($('#blockDateType')?.value || 'blocked').trim() || 'blocked',
+        note: String($('#blockDateNote')?.value || '').trim(),
+      });
     }
     S.saveBlockedDates(state.blockedDates);
+    state.selectedCalendarDate = dateIso;
     renderCalendar();
     broadcastUpdate('availability', ['blockedDates']);
   }
@@ -1541,15 +1586,13 @@
     $('#addBlockDateBtn')?.addEventListener('click', () => {
       const date = String($('#blockDateInput').value || '').trim();
       if (!date) return alert('Choose a date first.');
-      const type = String($('#blockDateType').value || 'blocked');
-      const note = String($('#blockDateNote').value || '').trim();
-      if (!state.blockedDates.find((item) => item.date === date)) {
-        state.blockedDates.unshift({ date, type, note });
-      }
-      S.saveBlockedDates(state.blockedDates);
-      renderCalendar();
+      toggleBlockDate(date);
     });
     $('#clearBlocksBtn')?.addEventListener('click', clearBlockedDates);
+    $('#blockDateInput')?.addEventListener('change', (event) => {
+      state.selectedCalendarDate = String(event.target.value || '').trim();
+      renderCalendar();
+    });
     $('#bookingModalSave')?.addEventListener('click', saveSelectedBookingStatus);
     $('#bookingModalCancel')?.addEventListener('click', cancelSelectedBooking);
     $('#bookingModalInvite')?.addEventListener('click', inviteSelectedBooking);

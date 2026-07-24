@@ -810,7 +810,11 @@ input:focus, select:focus, textarea:focus {
             </div>
             <div class="panel">
               <h3>Quick block dates</h3>
-              <p class="muted">Use this to block maintenance or private use dates. Reservations still come from bookings.</p>
+              <p class="muted">Use this to block maintenance or private-use dates. Reserved dates are created automatically from confirmed bookings and show an X on the calendar.</p>
+              <div class="admin-empty" style="margin-top:12px; padding:12px 14px;">
+                <strong>Reservation status is automatic.</strong>
+                <div class="muted" style="margin-top:4px;">Only <strong>Blocked</strong>, <strong>Maintenance</strong>, and <strong>Owner stay</strong> can be created here.</div>
+              </div>
               <div class="form-grid" style="margin-top:12px;">
                 <label class="field">Date
                   <input type="date" id="blockDateInput" />
@@ -827,10 +831,11 @@ input:focus, select:focus, textarea:focus {
                 </label>
               </div>
               <div class="section-actions" style="margin-top:12px;">
-                <button class="btn btn-primary" id="addBlockDateBtn" type="button">Block date</button>
-                <button class="btn btn-secondary" id="clearBlocksBtn" type="button">Clear all blocked dates</button>
+                <button class="btn btn-primary" id="addBlockDateBtn" type="button">Save block</button>
+                <button class="btn btn-secondary" id="clearBlocksBtn" type="button">Clear owner blocks</button>
               </div>
               <div class="card-list" id="blockedDatesList" style="margin-top:14px;"></div>
+              <div class="card-list" id="reservedDatesList" style="margin-top:14px;"></div>
             </div>
           </div>
         </section>
