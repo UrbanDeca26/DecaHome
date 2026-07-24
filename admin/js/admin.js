@@ -93,6 +93,15 @@
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   function currentSummary() {
     const today = new Date();
     const sevenDays = 7 * 86400000;
@@ -428,6 +437,7 @@
       const data = blocked[dateIso];
       let label = 'Available';
       let cls = 'calendar-day';
+      let isReserved = false;
       if (data) {
         label = data.type || 'Blocked';
         cls += ` is-${data.type || 'blocked'}`;
@@ -440,13 +450,15 @@
         if (booking) {
           label = booking.status || 'Reserved';
           cls += ' is-reserved';
+          isReserved = true;
         }
       }
       if (isToday) cls += ' is-today';
+      const titleText = `${dateIso} — ${label}${data?.note ? ` · ${data.note}` : ''}`;
       cells.push(`
-        <button class="${cls}" data-calendar-date="${dateIso}" type="button">
+        <button class="${cls}" data-calendar-date="${dateIso}" type="button" title="${S.escapeHtml(titleText)}" aria-label="${S.escapeHtml(titleText)}">
           <span class="day-num">${day}</span>
-          <span class="day-meta">${S.escapeHtml(label)}${data?.note ? `<br>${S.escapeHtml(data.note)}` : ''}</span>
+          <span class="day-meta">${S.escapeHtml(label)}</span>
         </button>
       `);
     }
@@ -469,7 +481,10 @@
     `).join('') : '<div class="admin-empty">No blocked dates set.</div>';
 
     $$('#calendarGrid [data-calendar-date]').forEach((button) => {
-      button.addEventListener('click', () => toggleBlockDate(button.dataset.calendarDate));
+      button.addEventListener('click', () => {
+        if (button.classList.contains('is-reserved')) return;
+        toggleBlockDate(button.dataset.calendarDate);
+      });
     });
     $$('#blockedDatesList [data-remove-block]').forEach((button) => {
       button.addEventListener('click', () => removeBlockDate(button.dataset.removeBlock));
@@ -746,9 +761,15 @@
   function renderSettings() {
     const settings = state.settings;
     $('#propertyNameInput').value = settings.propertyName || settings.name || '';
+    $('#hostNameInput').value = settings.hostName || 'Donnie';
+    $('#settingsHeroEyebrowInput').value = settings.heroEyebrow || '';
+    $('#settingsHeroTitleInput').value = settings.heroTitle || '';
+    $('#settingsHeroSubtitleInput').value = settings.heroSubtitle || '';
     $('#logoUrlInput').value = settings.logoUrl || '';
     $('#addressInput').value = settings.area || '';
     $('#buildingInput').value = settings.building || '';
+    $('#googleMapsUrlInput').value = settings.googleMapsUrl || '';
+    $('#wazeUrlInput').value = settings.wazeUrl || '';
     $('#contactEmailInput').value = settings.contactEmail || '';
     $('#contactPhoneInput').value = settings.contactPhone || '';
     $('#facebookInput').value = settings.socials?.facebook || '';
@@ -760,12 +781,17 @@
     $('#themeStartDayInput').value = settings.themeStartDay || '06:00';
     $('#themeStartNightInput').value = settings.themeStartNight || '18:00';
 
+    const socialSummary = [settings.socials?.facebook, settings.socials?.instagram, settings.socials?.tiktok, settings.socials?.website].filter(Boolean).join(' · ') || '—';
     $('#settingsPreview').innerHTML = [
       { label: 'Property name', value: settings.propertyName || settings.name },
+      { label: 'Hero copy', value: [settings.heroEyebrow, settings.heroTitle].filter(Boolean).join(' — ') || '—' },
+      { label: 'Hero subtitle', value: settings.heroSubtitle || '—' },
       { label: 'Address', value: `${settings.area || ''} ${settings.building || ''}`.trim() },
       { label: 'Contact', value: `${settings.contactEmail || '—'} · ${settings.contactPhone || '—'}` },
+      { label: 'Maps links', value: [settings.googleMapsUrl, settings.wazeUrl].filter(Boolean).join(' · ') || '—' },
+      { label: 'Host name', value: settings.hostName || 'Donnie' },
       { label: 'Theme', value: `${settings.themeStartDay || '06:00'} / ${settings.themeStartNight || '18:00'}` },
-      { label: 'Socials', value: [settings.socials?.facebook, settings.socials?.instagram, settings.socials?.tiktok].filter(Boolean).join(' · ') || '—' },
+      { label: 'Socials', value: socialSummary },
     ].map((item) => `
       <div class="card-item">
         <div class="card-item-head"><strong>${S.escapeHtml(item.label)}</strong></div>
@@ -938,46 +964,74 @@
   }
 
   function saveSettingsFromForm() {
-    state.settings.propertyName = String($('#propertyNameInput').value || '').trim() || 'Luxury Stay';
-    state.settings.name = state.settings.propertyName;
-    state.settings.logoUrl = String($('#logoUrlInput').value || '').trim();
-    state.settings.area = String($('#addressInput').value || '').trim();
-    state.settings.building = String($('#buildingInput').value || '').trim();
-    state.settings.contactEmail = String($('#contactEmailInput').value || '').trim();
-    state.settings.contactPhone = String($('#contactPhoneInput').value || '').trim();
-    state.settings.socials = {
-      facebook: String($('#facebookInput').value || '').trim(),
-      instagram: String($('#instagramInput').value || '').trim(),
-      tiktok: String($('#tiktokInput').value || '').trim(),
-      website: String($('#websiteInput').value || '').trim(),
+    const read = (selector, fallback = '') => {
+      const el = $(selector);
+      return el ? String(el.value ?? '').trim() : String(fallback ?? '').trim();
     };
-    state.settings.heroImage = String($('#heroImageInput').value || '').trim();
-    state.settings.heroImage2 = String($('#heroImage2Input').value || '').trim();
-    state.settings.themeStartDay = String($('#themeStartDayInput').value || '06:00').trim() || '06:00';
-    state.settings.themeStartNight = String($('#themeStartNightInput').value || '18:00').trim() || '18:00';
+    state.settings.propertyName = read('#propertyNameInput', state.settings.propertyName || 'Luxury Stay') || 'Luxury Stay';
+    state.settings.name = state.settings.propertyName;
+    state.settings.hostName = read('#hostNameInput', state.settings.hostName || 'Donnie') || 'Donnie';
+    state.settings.heroEyebrow = read('#settingsHeroEyebrowInput', state.settings.heroEyebrow || '');
+    state.settings.heroTitle = read('#settingsHeroTitleInput', state.settings.heroTitle || '');
+    state.settings.heroSubtitle = read('#settingsHeroSubtitleInput', state.settings.heroSubtitle || '');
+    state.settings.logoUrl = read('#logoUrlInput', state.settings.logoUrl || '');
+    state.settings.area = read('#addressInput', state.settings.area || '');
+    state.settings.building = read('#buildingInput', state.settings.building || '');
+    state.settings.googleMapsUrl = read('#googleMapsUrlInput', state.settings.googleMapsUrl || '');
+    state.settings.wazeUrl = read('#wazeUrlInput', state.settings.wazeUrl || '');
+    state.settings.contactEmail = read('#contactEmailInput', state.settings.contactEmail || '');
+    state.settings.contactPhone = read('#contactPhoneInput', state.settings.contactPhone || '');
+    state.settings.socials = {
+      facebook: read('#facebookInput', state.settings.socials?.facebook || ''),
+      instagram: read('#instagramInput', state.settings.socials?.instagram || ''),
+      tiktok: read('#tiktokInput', state.settings.socials?.tiktok || ''),
+      website: read('#websiteInput', state.settings.socials?.website || ''),
+    };
+    state.settings.heroImage = read('#heroImageInput', state.settings.heroImage || '');
+    state.settings.heroImage2 = read('#heroImage2Input', state.settings.heroImage2 || '');
+    state.settings.themeStartDay = read('#themeStartDayInput', state.settings.themeStartDay || '06:00') || '06:00';
+    state.settings.themeStartNight = read('#themeStartNightInput', state.settings.themeStartNight || '18:00') || '18:00';
     S.saveSettings(state.settings);
     renderSettings();
     renderDashboard();
   }
 
-  function saveMediaFromForm(e) {
+  async function saveMediaFromForm(e) {
     e.preventDefault();
     const type = String($('#mediaTypeInput').value || 'image');
+    const fileInput = $('#mediaFileInput');
+    const file = fileInput?.files?.[0] || null;
     const src = String($('#mediaSrcInput').value || '').trim();
     const label = String($('#mediaLabelInput').value || '').trim();
-    if (!src) {
-      alert('Please provide a file path or URL.');
+
+    let mediaSrc = src;
+    let poster;
+
+    if (file) {
+      const maxBytes = 12 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        const ok = window.confirm('This file is larger than 12 MB. It may be slow to store in the browser. Continue?');
+        if (!ok) return;
+      }
+      mediaSrc = await readFileAsDataUrl(file);
+      poster = type === 'video' ? './assets/9.jpg' : undefined;
+    }
+
+    if (!mediaSrc) {
+      alert('Choose a file or paste a URL.');
       return;
     }
+
+    const altText = label || (file ? file.name : mediaSrc);
     state.media.unshift({
       id: S.generateId('media'),
       type,
-      src,
-      alt: label || src,
-      label: label || src,
+      src: mediaSrc,
+      alt: altText,
+      label: altText,
       featured: false,
       hidden: false,
-      poster: type === 'video' ? './assets/9.jpg' : undefined,
+      poster,
     });
     S.saveMedia(state.media);
     $('#mediaForm').reset();
@@ -1082,7 +1136,7 @@
     renderAll();
     await Promise.all([loadBookings(), loadReviews()]);
 
-    $('#saveAllBtn')?.addEventListener('click', () => {
+    const saveAllChanges = () => {
       savePricingFromForm();
       saveGuideFromForm();
       saveLunaFromForm();
@@ -1092,8 +1146,9 @@
       S.saveBlockedDates(state.blockedDates);
       S.saveInquiries(state.inquiries);
       alert('All changes saved.');
-    });
+    };
 
+    $('#saveAllBtn')?.addEventListener('click', saveAllChanges);
     $('#exportJsonBtn')?.addEventListener('click', () => exportJson());
     $('#importJsonInput')?.addEventListener('change', async (e) => {
       const file = e.target.files && e.target.files[0];
@@ -1115,12 +1170,6 @@
 
     $('#refreshBookingsBtn')?.addEventListener('click', loadBookings);
     $('#refreshReviewsBtn')?.addEventListener('click', loadReviews);
-    $('#saveAllBtn')?.addEventListener('click', () => {
-      savePricingFromForm();
-      saveGuideFromForm();
-      saveLunaFromForm();
-      saveSettingsFromForm();
-    });
 
     $('#pricingForm')?.addEventListener('submit', (e) => { e.preventDefault(); savePricingFromForm(); });
     $('#guideForm')?.addEventListener('submit', (e) => { e.preventDefault(); saveGuideFromForm(); });

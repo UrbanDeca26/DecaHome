@@ -24,6 +24,9 @@
     includedGuests: 2,
     extraGuestFee: 400,
     petFee: 200,
+    googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=Urban+Deca+Homes+Ortigas+Extension,+Pasig+City',
+    wazeUrl: 'https://waze.com/ul?q=Urban%20Deca%20Homes%20Ortigas%20Extension%2C%20Pasig%20City&navigate=yes',
+    hostName: 'Donnie',
     checkIn: '1:00 PM onwards',
     checkOut: '11:00 AM next day',
     securityDeposit: 'PHP 1,000 refundable deposit / reservation fee',
@@ -284,6 +287,9 @@
     next.heroImage2 = String(src.heroImage2 || next.heroImage2 || '').trim();
     next.themeStartDay = String(src.themeStartDay || next.themeStartDay || '06:00').trim() || '06:00';
     next.themeStartNight = String(src.themeStartNight || next.themeStartNight || '18:00').trim() || '18:00';
+    next.googleMapsUrl = String(src.googleMapsUrl || next.googleMapsUrl || '').trim();
+    next.wazeUrl = String(src.wazeUrl || next.wazeUrl || '').trim();
+    next.hostName = String(src.hostName || next.hostName || 'Donnie').trim() || 'Donnie';
     next.socials = {
       facebook: String(src.socials?.facebook || src.facebook || next.socials.facebook || '').trim(),
       instagram: String(src.socials?.instagram || src.instagram || next.socials.instagram || '').trim(),

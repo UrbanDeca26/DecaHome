@@ -578,25 +578,34 @@ label.field textarea:focus,
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 14px;
+  align-items: center;
 }
 
 .legend .dot {
+  width: auto;
+  height: auto;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 8px 11px;
   border-radius: 999px;
   background: rgba(255,255,255,.82);
   border: 1px solid var(--line);
   color: var(--muted);
   font-size: .82rem;
   font-weight: 800;
+  white-space: nowrap;
+  line-height: 1;
 }
 .legend .dot::before {
   content: '';
-  width: 10px; height: 10px; border-radius: 50%; background: currentColor;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
 }
 
 .calendar-toolbar {
@@ -616,19 +625,43 @@ label.field textarea:focus,
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calendar-summary {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
+  margin-bottom: 6px;
+}
+.calendar-summary-card {
+  min-height: 76px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.84);
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.calendar-summary-card strong {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.calendar-summary-card .badge {
+  justify-self: start;
 }
 
 .calendar-weekday,
 .calendar-day {
   border-radius: 14px;
-  min-height: 44px;
-  display: grid;
-  place-items: center;
-  padding: 10px 8px;
 }
 
 .calendar-weekday {
+  min-height: 42px;
+  display: grid;
+  place-items: center;
   background: rgba(255,255,255,.92);
   border: 1px solid var(--line);
   color: var(--muted);
@@ -642,27 +675,49 @@ label.field textarea:focus,
   position: relative;
   background: rgba(255,255,255,.92);
   border: 1px solid var(--line);
-  align-items: start;
-  justify-items: start;
+  min-height: 96px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
   text-align: left;
-  min-height: 92px;
+  overflow: hidden;
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  width: 100%;
 }
 
 .calendar-day:hover { transform: translateY(-1px); box-shadow: var(--shadow-soft); }
-.calendar-day .day-num { font-weight: 900; }
+.calendar-day .day-num { font-weight: 900; line-height: 1; }
 .calendar-day .day-meta {
-  font-size: .72rem;
+  font-size: .75rem;
   color: var(--muted);
   line-height: 1.35;
-  margin-top: 2px;
 }
-.calendar-day.is-today { border-color: rgba(155,74,54,.24); box-shadow: inset 0 0 0 1px rgba(155,74,54,.18); }
-.calendar-day.is-blocked { background: rgba(99,99,99,.12); }
-.calendar-day.is-reserved { background: rgba(180,58,58,.10); }
-.calendar-day.is-maintenance { background: rgba(61,111,141,.10); }
-.calendar-day.is-owner { background: rgba(140,111,20,.10); }
+.calendar-day.is-available { background: rgba(153,188,104,.10); }
+.calendar-day.is-blocked { background: rgba(99,99,99,.12); border-color: rgba(99,99,99,.20); }
+.calendar-day.is-reserved { background: rgba(180,58,58,.10); border-color: rgba(180,58,58,.20); }
+.calendar-day.is-maintenance { background: rgba(61,111,141,.10); border-color: rgba(61,111,141,.20); }
+.calendar-day.is-owner { background: rgba(140,111,20,.10); border-color: rgba(140,111,20,.20); }
+.calendar-day.is-today { box-shadow: inset 0 0 0 1px rgba(155,74,54,.18); }
+.calendar-day.is-reserved::after {
+  content: 'X';
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.86);
+  color: #8f3d39;
+  font-size: .88rem;
+  font-weight: 900;
+  box-shadow: 0 8px 16px rgba(52, 40, 28, 0.08);
+}
 .calendar-day button { border: 0; background: transparent; width: 100%; height: 100%; text-align: left; padding: 0; }
+
 .calendar-placeholder {
   background: rgba(255,255,255,.56);
   border: 1px dashed rgba(34,26,18,.06);
@@ -976,3 +1031,5 @@ label.field textarea:focus,
   .admin-sidebar { padding: 26px 20px; }
   .admin-main { padding: 18px 24px 30px; }
 }
+
+.media-upload-help { margin: 8px 0 0; color: var(--muted); font-size: .88rem; line-height: 1.5; }
