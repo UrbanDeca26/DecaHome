@@ -19,6 +19,13 @@
     checkIn: '1:00 PM onwards',
     checkOut: '11:00 AM next day',
     securityDeposit: 'PHP 1,000 refundable deposit / reservation fee',
+    weekdayRate: 1999,
+    weekendRate: 2199,
+    includedGuests: 2,
+    extraGuestFee: 400,
+    petFee: 200,
+    maxGuests: 9,
+    maxPets: 3,
     parking: 'No parking included; please advise early if parking is needed.',
     parkingRates: {
       car: 'PHP 400.00 per 24 hrs',
@@ -165,6 +172,7 @@
     amenities: loadJson('luxury_stay_amenities_v4', DEFAULT_AMENITIES),
     admin: false,
     editingAmenityId: null,
+    pendingBookingPricing: null,
   };
 
   function loadJson(key, fallback) {
@@ -215,6 +223,62 @@
     return match ? Number(match[1]) : 9;
   }
 
+  const PHP_FORMATTER = new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  function formatCurrency(value) {
+    const amount = Number(value);
+    return PHP_FORMATTER.format(Number.isFinite(amount) ? amount : 0);
+  }
+
+  const BOOKING_DATE_FORMATTER = new Intl.DateTimeFormat('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+
+  function formatBookingDisplayDate(value) {
+    const date = parseBookingDate(value);
+    return date ? BOOKING_DATE_FORMATTER.format(date) : '—';
+  }
+
+  function coerceNumber(value, fallback, { min = Number.NEGATIVE_INFINITY, max = Number.POSITIVE_INFINITY, integer = false } = {}) {
+    if (value === null || value === undefined || value === '') return fallback;
+    const cleaned = String(value).replace(/[^0-9.-]/g, '');
+    const parsed = Number(cleaned);
+    if (!Number.isFinite(parsed)) return fallback;
+    let next = parsed;
+    if (integer) next = Math.round(next);
+    if (Number.isFinite(min)) next = Math.max(min, next);
+    if (Number.isFinite(max)) next = Math.min(max, next);
+    return next;
+  }
+
+  function parseBookingDate(value) {
+    if (!value) return null;
+    const parts = String(value).split('-').map(Number);
+    if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return null;
+    const [year, month, day] = parts;
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function addUtcDays(date, days) {
+    const next = new Date(date.getTime());
+    next.setUTCDate(next.getUTCDate() + days);
+    return next;
+  }
+
+  function isWeekendDate(date) {
+    const day = date.getUTCDay();
+    return day === 0 || day === 5 || day === 6;
+  }
+
   function normalizeSettings(input) {
     const src = input && typeof input === 'object' ? input : {};
     const next = clone(PROPERTY);
@@ -222,8 +286,16 @@
     next.name = next.propertyName;
     next.area = String(src.area || next.area || '').trim();
     next.building = String(src.building || next.building || '').trim();
-    next.guestCapacity = Number(src.guestCapacity || extractCapacity(src.capacity || next.capacity) || 9);
-    next.capacity = `Up to ${next.guestCapacity} guests`;
+    const maxGuests = coerceNumber(src.maxGuests ?? src.guestCapacity ?? extractCapacity(src.capacity || next.capacity) ?? next.maxGuests, next.maxGuests, { min: 1, max: 20, integer: true });
+    next.maxGuests = maxGuests;
+    next.guestCapacity = maxGuests;
+    next.maxPets = coerceNumber(src.maxPets ?? next.maxPets, next.maxPets, { min: 0, max: 10, integer: true });
+    next.weekdayRate = coerceNumber(src.weekdayRate ?? next.weekdayRate, next.weekdayRate, { min: 0 });
+    next.weekendRate = coerceNumber(src.weekendRate ?? next.weekendRate, next.weekendRate, { min: 0 });
+    next.includedGuests = coerceNumber(src.includedGuests ?? next.includedGuests, next.includedGuests, { min: 1, max: next.maxGuests, integer: true });
+    next.extraGuestFee = coerceNumber(src.extraGuestFee ?? next.extraGuestFee, next.extraGuestFee, { min: 0 });
+    next.petFee = coerceNumber(src.petFee ?? next.petFee, next.petFee, { min: 0 });
+    next.capacity = `Up to ${next.maxGuests} guests`;
     next.heroEyebrow = String(src.heroEyebrow || `${next.area} • ${next.capacity}`).trim();
     next.heroTitle = String(src.heroTitle || 'Comfortable stays for families, friends, and quick city breaks.').trim();
     next.heroSubtitle = String(src.heroSubtitle || 'A clean, practical space with hotel-style essentials, self check-in, fast Wi‑Fi, and a location that keeps the whole group close to Ortigas.').trim();
@@ -254,7 +326,8 @@
   }
 
   function getGuestCapacity() {
-    const n = Number(getSettings().guestCapacity);
+    const settings = getSettings();
+    const n = Number(settings.maxGuests ?? settings.guestCapacity);
     return Number.isFinite(n) && n > 0 ? Math.min(20, Math.max(1, Math.round(n))) : 9;
   }
 
@@ -264,6 +337,101 @@
       top: pricing[0] || 'Pricing available in the guide',
       secondary: pricing[1] || pricing[0] || 'Pricing available in the guide',
       tertiary: pricing[2] || pricing[1] || pricing[0] || 'Pricing available in the guide',
+    };
+  }
+
+  function getPricingRules() {
+    const settings = getSettings();
+    return {
+      weekdayRate: coerceNumber(settings.weekdayRate, 0, { min: 0 }),
+      weekendRate: coerceNumber(settings.weekendRate, 0, { min: 0 }),
+      includedGuests: Math.max(1, coerceNumber(settings.includedGuests, 1, { min: 1, integer: true })),
+      extraGuestFee: coerceNumber(settings.extraGuestFee, 0, { min: 0 }),
+      petFee: coerceNumber(settings.petFee, 0, { min: 0 }),
+      maxGuests: Math.max(1, coerceNumber(settings.maxGuests || settings.guestCapacity, 9, { min: 1, max: 20, integer: true })),
+      maxPets: Math.max(0, coerceNumber(settings.maxPets, 3, { min: 0, max: 10, integer: true })),
+    };
+  }
+
+  function calculateBookingPricing({ checkin, checkout, guests, pets }) {
+    const rules = getPricingRules();
+    const start = parseBookingDate(checkin);
+    const end = parseBookingDate(checkout);
+    const guestCount = Math.max(0, coerceNumber(guests, 0, { min: 0, max: rules.maxGuests, integer: true }));
+    const petCount = Math.max(0, coerceNumber(pets, 0, { min: 0, max: rules.maxPets, integer: true }));
+
+    if (!start || !end) {
+      return { valid: false, error: 'Please choose both check-in and check-out dates.' };
+    }
+
+    const nights = Math.round((end.getTime() - start.getTime()) / 86400000);
+    if (nights <= 0) {
+      return { valid: false, error: 'Check-out must be after check-in.' };
+    }
+
+    if (guestCount > rules.maxGuests) {
+      return { valid: false, error: `Guest count cannot exceed ${rules.maxGuests}.` };
+    }
+
+    if (petCount > rules.maxPets) {
+      return { valid: false, error: `Pet count cannot exceed ${rules.maxPets}.` };
+    }
+
+    const today = parseBookingDate(getTodayLocalISO());
+    if (today && start < today) {
+      return { valid: false, error: 'Check-in date cannot be in the past.' };
+    }
+
+    let baseRate = 0;
+    let cursor = start;
+    const nightlyRates = [];
+
+    for (let i = 0; i < nights; i += 1) {
+      const rate = isWeekendDate(cursor) ? rules.weekendRate : rules.weekdayRate;
+      nightlyRates.push(rate);
+      baseRate += rate;
+      cursor = addUtcDays(cursor, 1);
+    }
+
+    const extraGuests = Math.max(0, guestCount - rules.includedGuests);
+    const extraGuestCharge = extraGuests * rules.extraGuestFee * nights;
+    const petCharge = petCount * rules.petFee * nights;
+    const total = baseRate + extraGuestCharge + petCharge;
+
+    return {
+      valid: true,
+      nights,
+      guestCount,
+      petCount,
+      extraGuests,
+      baseRate,
+      extraGuestCharge,
+      petCharge,
+      total,
+      nightlyRates,
+      rules,
+      summary: {
+        baseRate: formatCurrency(baseRate),
+        extraGuestCharge: formatCurrency(extraGuestCharge),
+        petCharge: formatCurrency(petCharge),
+        total: formatCurrency(total),
+      },
+      breakdown: {
+        checkin,
+        checkout,
+        nights,
+        nightlyRates,
+        guestCount,
+        petCount,
+        extraGuests,
+        baseRate,
+        extraGuestCharge,
+        petCharge,
+        total,
+        includedGuests: rules.includedGuests,
+        extraGuestFee: rules.extraGuestFee,
+        petFee: rules.petFee,
+      },
     };
   }
 
@@ -326,8 +494,30 @@
 
     const guestSelect = $('#guests');
     if (guestSelect) {
-      guestSelect.innerHTML = Array.from({ length: guestCapacity }, (_, i) => `<option>${i + 1} guest${i === 0 ? '' : 's'}</option>`).join('');
+      const currentGuests = Number(guestSelect.value || settings.includedGuests || 1);
+      guestSelect.innerHTML = Array.from({ length: guestCapacity }, (_, i) => {
+        const count = i + 1;
+        return `<option value="${count}">${count} guest${count === 1 ? '' : 's'}</option>`;
+      }).join('');
+      const clampedGuests = Math.min(Math.max(1, currentGuests || settings.includedGuests || 1), guestCapacity);
+      guestSelect.value = String(clampedGuests);
     }
+
+    const petSelect = $('#pets');
+    if (petSelect) {
+      const currentPets = Number(petSelect.value || 0);
+      const maxPets = Math.max(0, Number(settings.maxPets || 0));
+      petSelect.innerHTML = [`<option value="0">No pets</option>`].concat(
+        Array.from({ length: maxPets }, (_, i) => {
+          const count = i + 1;
+          return `<option value="${count}">${count} pet${count === 1 ? '' : 's'}</option>`;
+        })
+      ).join('');
+      const clampedPets = Math.min(Math.max(0, currentPets || 0), maxPets);
+      petSelect.value = String(clampedPets);
+    }
+
+    updateBookingPricingUI();
 
     const reserveBtn = $('#reserveBtn');
     if (reserveBtn) reserveBtn.textContent = 'Check availability';
@@ -593,11 +783,23 @@
         <h4>Property settings</h4>
         <div class="owner-row">
           <label>Property name <input id="settingsPropertyName" type="text" value="${escapeHtml(s.name)}" /></label>
-          <label>Guest capacity <input id="settingsGuestCapacity" type="number" min="1" max="20" value="${escapeHtml(String(s.guestCapacity || 9))}" /></label>
+          <label>Maximum guests <input id="settingsGuestCapacity" type="number" min="1" max="20" value="${escapeHtml(String(s.maxGuests || s.guestCapacity || 9))}" /></label>
         </div>
         <div class="owner-row">
           <label>Hero eyebrow <input id="settingsHeroEyebrow" type="text" value="${escapeHtml(s.heroEyebrow || '')}" /></label>
           <label>Host name <input id="settingsHostName" type="text" value="${escapeHtml(s.hostName || 'Donnie')}" /></label>
+        </div>
+        <div class="owner-row">
+          <label>Weekday rate <input id="settingsWeekdayRate" type="number" min="0" step="1" value="${escapeHtml(String(s.weekdayRate ?? 1999))}" /></label>
+          <label>Weekend rate <input id="settingsWeekendRate" type="number" min="0" step="1" value="${escapeHtml(String(s.weekendRate ?? 2199))}" /></label>
+        </div>
+        <div class="owner-row">
+          <label>Included guests <input id="settingsIncludedGuests" type="number" min="1" step="1" value="${escapeHtml(String(s.includedGuests ?? 2))}" /></label>
+          <label>Extra guest fee <input id="settingsExtraGuestFee" type="number" min="0" step="1" value="${escapeHtml(String(s.extraGuestFee ?? 400))}" /></label>
+        </div>
+        <div class="owner-row">
+          <label>Pet fee <input id="settingsPetFee" type="number" min="0" step="1" value="${escapeHtml(String(s.petFee ?? 200))}" /></label>
+          <label>Maximum pets <input id="settingsMaxPets" type="number" min="0" step="1" value="${escapeHtml(String(s.maxPets ?? 3))}" /></label>
         </div>
         <label>Hero title <input id="settingsHeroTitle" type="text" value="${escapeHtml(s.heroTitle || '')}" /></label>
         <label>Hero subtitle <textarea id="settingsHeroSubtitle">${escapeHtml(s.heroSubtitle || '')}</textarea></label>
@@ -639,6 +841,13 @@
       const next = normalizeSettings({
         propertyName: $('#settingsPropertyName')?.value,
         guestCapacity: $('#settingsGuestCapacity')?.value,
+        maxGuests: $('#settingsGuestCapacity')?.value,
+        weekdayRate: $('#settingsWeekdayRate')?.value,
+        weekendRate: $('#settingsWeekendRate')?.value,
+        includedGuests: $('#settingsIncludedGuests')?.value,
+        extraGuestFee: $('#settingsExtraGuestFee')?.value,
+        petFee: $('#settingsPetFee')?.value,
+        maxPets: $('#settingsMaxPets')?.value,
         heroEyebrow: $('#settingsHeroEyebrow')?.value,
         hostName: $('#settingsHostName')?.value,
         heroTitle: $('#settingsHeroTitle')?.value,
@@ -1023,7 +1232,7 @@
       return `Parking is by request. Rates are Car: ${settings.parkingRates.car} and Motorcycle: ${settings.parkingRates.motorcycle}. Please advise early if you need parking.`;
     }
     if (/(price|rate|cost|pricing)/.test(q)) {
-      return `Here’s the pricing guide: ${settings.pricing.slice(0, 3).join(' · ')}${settings.pricing.length > 3 ? ' · ...' : ''}`;
+      return `Pricing is calculated live from the booking card. Weekdays: ${formatCurrency(settings.weekdayRate)} · Weekends: ${formatCurrency(settings.weekendRate)} · Included guests: ${settings.includedGuests} · Extra guest fee: ${formatCurrency(settings.extraGuestFee)} · Pet fee: ${formatCurrency(settings.petFee)}.`;
     }
     if (/(rule|smok|noise|visitor|pool|house)/.test(q)) {
       return `House rules include: ${settings.houseRules.join(' · ')}.`;
@@ -1141,14 +1350,213 @@
   }
 
 
-  function resetBookingForm() {
+  function getBookingState() {
+    return {
+      checkin: String($('#checkin')?.value || '').trim(),
+      checkout: String($('#checkout')?.value || '').trim(),
+      guests: Number($('#guests')?.value || 0),
+      pets: Number($('#pets')?.value || 0),
+    };
+  }
+
+  function updateBookingPricingUI() {
+    const bookingState = getBookingState();
+    const summary = calculateBookingPricing(bookingState);
+    const baseRateEl = $('#bookingBaseRate');
+    const extraGuestsEl = $('#bookingExtraGuests');
+    const petsEl = $('#bookingPetCharge');
+    const totalEl = $('#bookingTotal');
+    const messageEl = $('#bookingPriceMessage');
+    const priceBtn = $('#priceDetailsBtn');
+
+    const zero = formatCurrency(0);
+    if (baseRateEl) baseRateEl.textContent = summary.valid ? summary.summary.baseRate : zero;
+    if (extraGuestsEl) extraGuestsEl.textContent = summary.valid ? summary.summary.extraGuestCharge : zero;
+    if (petsEl) petsEl.textContent = summary.valid ? summary.summary.petCharge : zero;
+    if (totalEl) totalEl.textContent = summary.valid ? summary.summary.total : zero;
+
+    if (messageEl) {
+      if (!summary.valid) {
+        const hasCheckin = Boolean(bookingState.checkin);
+        const hasCheckout = Boolean(bookingState.checkout);
+        if (!hasCheckin && !hasCheckout) messageEl.textContent = 'Select your dates to calculate the total.';
+        else if (hasCheckin && !hasCheckout) messageEl.textContent = 'Choose a checkout date to continue.';
+        else messageEl.textContent = summary.error || 'Please review your dates.';
+        messageEl.classList.add('is-error');
+      } else {
+        messageEl.textContent = `${summary.nights} night${summary.nights === 1 ? '' : 's'} · ${summary.guestCount} guest${summary.guestCount === 1 ? '' : 's'} · ${summary.petCount} pet${summary.petCount === 1 ? '' : 's'}`;
+        messageEl.classList.remove('is-error');
+      }
+    }
+
+    if (priceBtn) {
+      priceBtn.disabled = !summary.valid;
+      priceBtn.dataset.hasPricing = summary.valid ? 'true' : 'false';
+    }
+
+    renderBookingConfirmSummary(summary);
+
+    return summary;
+  }
+
+  function renderBookingConfirmSummary(pricing) {
+    const modal = $('#bookingConfirmModal');
+    const summaryReady = pricing && pricing.valid;
+    const checkinEl = $('#bookingConfirmCheckin');
+    const checkoutEl = $('#bookingConfirmCheckout');
+    const nightsEl = $('#bookingConfirmNights');
+    const guestsEl = $('#bookingConfirmGuests');
+    const petsEl = $('#bookingConfirmPets');
+    const baseRateEl = $('#bookingConfirmBaseRate');
+    const extraGuestsEl = $('#bookingConfirmExtraGuests');
+    const petChargeEl = $('#bookingConfirmPetCharge');
+    const totalEl = $('#bookingConfirmTotal');
+    const hintEl = $('#bookingConfirmHint');
+
+    if (!summaryReady) {
+      if (checkinEl) checkinEl.textContent = '—';
+      if (checkoutEl) checkoutEl.textContent = '—';
+      if (nightsEl) nightsEl.textContent = '—';
+      if (guestsEl) guestsEl.textContent = '—';
+      if (petsEl) petsEl.textContent = '—';
+      if (baseRateEl) baseRateEl.textContent = formatCurrency(0);
+      if (extraGuestsEl) extraGuestsEl.textContent = formatCurrency(0);
+      if (petChargeEl) petChargeEl.textContent = formatCurrency(0);
+      if (totalEl) totalEl.textContent = formatCurrency(0);
+      if (hintEl) hintEl.textContent = 'Review your total, then proceed to enter your contact details.';
+      return;
+    }
+
+    if (checkinEl) checkinEl.textContent = formatBookingDisplayDate(pricing.breakdown.checkin);
+    if (checkoutEl) checkoutEl.textContent = formatBookingDisplayDate(pricing.breakdown.checkout);
+    if (nightsEl) nightsEl.textContent = `${pricing.nights} night${pricing.nights === 1 ? '' : 's'}`;
+    if (guestsEl) guestsEl.textContent = `${pricing.guestCount} guest${pricing.guestCount === 1 ? '' : 's'}`;
+    if (petsEl) petsEl.textContent = `${pricing.petCount} pet${pricing.petCount === 1 ? '' : 's'}`;
+    if (baseRateEl) baseRateEl.textContent = pricing.summary.baseRate;
+    if (extraGuestsEl) extraGuestsEl.textContent = pricing.summary.extraGuestCharge;
+    if (petChargeEl) petChargeEl.textContent = pricing.summary.petCharge;
+    if (totalEl) totalEl.textContent = pricing.summary.total;
+    if (hintEl) {
+      hintEl.textContent = modal && modal.classList.contains('open')
+        ? 'Proceed to confirm to enter your contact details and receive a receipt.'
+        : 'Review your total, then proceed to enter your contact details.';
+    }
+  }
+
+  function setBookingConfirmStage(stage) {
+    const review = $('#bookingConfirmStepReview');
+    const details = $('#bookingConfirmStepDetails');
+    const success = $('#bookingConfirmStepSuccess');
+    if (review) review.classList.toggle('hidden', stage !== 'review');
+    if (details) details.classList.toggle('hidden', stage !== 'details');
+    if (success) success.classList.toggle('hidden', stage !== 'success');
+  }
+
+  function openBookingConfirmModal() {
+    const pricing = updateBookingPricingUI();
+    if (!pricing.valid) {
+      alert(pricing.error || 'Please review your booking details.');
+      return;
+    }
+
+    state.pendingBookingPricing = pricing;
+    const modal = $('#bookingConfirmModal');
+    const title = $('#bookingConfirmTitle');
+    if (!modal || !title) return;
+
+    title.textContent = 'Review your stay';
+    $('#bookingConfirmForm')?.reset();
+    setBookingConfirmStage('review');
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    window.setTimeout(() => $('#bookingConfirmProceed')?.focus(), 50);
+  }
+
+  function closeBookingConfirmModal() {
+    const modal = $('#bookingConfirmModal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    $('#bookingConfirmForm')?.reset();
+    state.pendingBookingPricing = null;
+    setBookingConfirmStage('review');
+    const title = $('#bookingConfirmTitle');
+    if (title) title.textContent = 'Review your stay';
+  }
+
+  function openBookingConfirmDetails() {
+    const pricing = state.pendingBookingPricing || updateBookingPricingUI();
+    if (!pricing.valid) {
+      alert(pricing.error || 'Please review your booking details.');
+      return;
+    }
+    setBookingConfirmStage('details');
+    window.setTimeout(() => $('#guestName')?.focus(), 50);
+  }
+
+  function showBookingSuccess(bookingRef) {
+    const title = $('#bookingConfirmTitle');
+    const refEl = $('#bookingSuccessRef');
+    if (title) title.textContent = 'Booking confirmed';
+    if (refEl) refEl.textContent = bookingRef || '—';
+    setBookingConfirmStage('success');
+  }
+
+  function openPriceDetailsModal(pricing) {
+    const modal = $('#priceDetailsModal');
+    const body = $('#priceDetailsBody');
+    const title = $('#priceDetailsTitle');
+    if (!modal || !body || !title || !pricing?.valid) return;
+
+    const rows = pricing.nightlyRates.map((rate, index) => {
+      const day = addUtcDays(parseBookingDate(pricing.breakdown.checkin), index);
+      const dayName = day.toLocaleDateString('en-PH', { weekday: 'long', timeZone: 'UTC' });
+      return `<li><span>${escapeHtml(dayName)}</span><strong>${escapeHtml(formatCurrency(rate))}</strong></li>`;
+    }).join('');
+
+    body.innerHTML = `
+      <div class="price-detail-grid">
+        <div class="price-detail-card"><span>Nights</span><strong>${pricing.nights}</strong></div>
+        <div class="price-detail-card"><span>Included guests</span><strong>${pricing.breakdown.includedGuests}</strong></div>
+        <div class="price-detail-card"><span>Extra guests</span><strong>${pricing.extraGuests}</strong></div>
+        <div class="price-detail-card"><span>Pets</span><strong>${pricing.petCount}</strong></div>
+      </div>
+      <div class="price-detail-section">
+        <h4>Nightly rates</h4>
+        <ul class="price-night-list">${rows}</ul>
+      </div>
+      <div class="price-detail-section">
+        <h4>Calculation</h4>
+        <ul class="price-calculation-list">
+          <li><span>Base rate</span><strong>${escapeHtml(pricing.summary.baseRate)}</strong></li>
+          <li><span>Extra guests</span><strong>${escapeHtml(pricing.summary.extraGuestCharge)}</strong></li>
+          <li><span>Pets</span><strong>${escapeHtml(pricing.summary.petCharge)}</strong></li>
+          <li class="total"><span>Total</span><strong>${escapeHtml(pricing.summary.total)}</strong></li>
+        </ul>
+      </div>`;
+    title.textContent = `Your total for ${pricing.nights} night${pricing.nights === 1 ? '' : 's'}`;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closePriceDetailsModal() {
+    const modal = $('#priceDetailsModal');
+    const body = $('#priceDetailsBody');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    if (body) body.innerHTML = '';
+  }
+
+  function resetBookingForm(options = {}) {
+    const { preserveModalStage = false } = options;
     const fields = [
       '#guestName',
       '#guestEmail',
       '#guestPhone',
+      '#guestNote',
       '#checkin',
       '#checkout',
-      '#guestNote',
     ];
 
     fields.forEach((selector) => {
@@ -1157,12 +1565,21 @@
     });
 
     const guests = $('#guests');
-    if (guests) guests.selectedIndex = 0;
+    const pets = $('#pets');
+    const settings = getSettings();
+    if (guests) guests.value = String(Math.min(Math.max(1, settings.includedGuests || 1), getGuestCapacity()));
+    if (pets) pets.value = '0';
 
-    const form = $('#reserveBtn')?.closest('form');
-    if (form && typeof form.reset === 'function') {
-      form.reset();
+    state.pendingBookingPricing = null;
+    if (!preserveModalStage) {
+      setBookingConfirmStage('review');
+      const title = $('#bookingConfirmTitle');
+      if (title) title.textContent = 'Review your stay';
+      const refEl = $('#bookingSuccessRef');
+      if (refEl) refEl.textContent = '—';
     }
+
+    updateBookingPricingUI();
   }
 
   function getTodayLocalISO() {
@@ -1185,11 +1602,16 @@
       if (checkout.value && checkout.value < checkout.min) {
         checkout.value = checkout.min;
       }
+      updateBookingPricingUI();
     };
 
     syncCheckoutMin();
     checkin.addEventListener('change', syncCheckoutMin);
     checkin.addEventListener('input', syncCheckoutMin);
+    checkout.addEventListener('change', updateBookingPricingUI);
+    checkout.addEventListener('input', updateBookingPricingUI);
+    $('#guests')?.addEventListener('change', updateBookingPricingUI);
+    $('#pets')?.addEventListener('change', updateBookingPricingUI);
   }
 
   function validateBookingDates(checkinValue, checkoutValue) {
@@ -1201,7 +1623,13 @@
   }
 
   async function submitBooking(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    const pricing = state.pendingBookingPricing || updateBookingPricingUI();
+    if (!pricing.valid) {
+      alert(pricing.error || 'Please review your booking details.');
+      return;
+    }
+
     const payload = {
       guestName: String($('#guestName')?.value || '').trim(),
       guestEmail: String($('#guestEmail')?.value || '').trim(),
@@ -1209,7 +1637,10 @@
       checkin: String($('#checkin')?.value || '').trim(),
       checkout: String($('#checkout')?.value || '').trim(),
       guests: String($('#guests')?.value || '').trim(),
+      pets: String($('#pets')?.value || '0').trim(),
       note: String($('#guestNote')?.value || '').trim(),
+      pricing: { ...pricing.breakdown, summary: pricing.summary },
+      total: pricing.total,
     };
 
     const dateCheck = validateBookingDates(payload.checkin, payload.checkout);
@@ -1218,15 +1649,15 @@
       return;
     }
 
-    const btn = $('#reserveBtn');
     if (!payload.guestName || !payload.guestEmail || !payload.checkin || !payload.checkout || !payload.guests) {
-      alert('Please complete name, email, dates, and guest count.');
+      alert('Please complete your name, email, dates, and guest count.');
       return;
     }
 
+    const btn = $('#confirmBookingBtn');
     if (btn) {
       btn.disabled = true;
-      btn.textContent = 'Checking...';
+      btn.textContent = 'Confirming...';
     }
 
     try {
@@ -1236,9 +1667,9 @@
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Failed to send booking inquiry');
-      alert('Your request has been sent to the host.');
-      resetBookingForm();
+      if (!res.ok) throw new Error(data.error || 'Failed to send booking request');
+
+      showBookingSuccess(data.bookingRef || data.reference || '—');
     } catch (err) {
       alert(`${err.message}
 
@@ -1246,7 +1677,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = 'Check availability';
+        btn.textContent = 'Confirm booking';
       }
     }
   }
@@ -1790,7 +2221,24 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
       }
     });
 
-    $('#reserveBtn')?.addEventListener('click', submitBooking);
+    $('#reserveBtn')?.addEventListener('click', openBookingConfirmModal);
+    $('#bookingConfirmProceed')?.addEventListener('click', openBookingConfirmDetails);
+    $('#bookingConfirmBack')?.addEventListener('click', () => setBookingConfirmStage('review'));
+    $('#bookingConfirmCancel')?.addEventListener('click', closeBookingConfirmModal);
+    $('#closeBookingConfirm')?.addEventListener('click', closeBookingConfirmModal);
+    $('#bookingConfirmForm')?.addEventListener('submit', submitBooking);
+    $('#closeBookingSuccess')?.addEventListener('click', closeBookingConfirmModal);
+    $('#bookingConfirmModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'bookingConfirmModal') closeBookingConfirmModal();
+    });
+    $('#priceDetailsBtn')?.addEventListener('click', () => {
+      const pricing = calculateBookingPricing(getBookingState());
+      if (pricing.valid) openPriceDetailsModal(pricing);
+    });
+    $('#closePriceDetails')?.addEventListener('click', closePriceDetailsModal);
+    $('#priceDetailsModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'priceDetailsModal') closePriceDetailsModal();
+    });
 
     $('#guideGrid')?.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-guide-id]');
@@ -1887,6 +2335,8 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
         if ($('.guide-modal.open')) closeGuideModal();
         if ($('.lightbox.open')) closeLightbox();
         if ($('.site-modal.open')) closeAmenitiesModal();
+        if ($('#bookingConfirmModal')?.classList.contains('open')) closeBookingConfirmModal();
+        if ($('#priceDetailsModal')?.classList.contains('open')) closePriceDetailsModal();
       }
       if (!$('.lightbox.open')) return;
       if (e.key === 'ArrowLeft') stepLightbox(-1);
@@ -1929,6 +2379,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     renderComments();
     renderChatSuggestions(LUNA_DEFAULT_SUGGESTIONS);
     setBookingDateBounds();
+    updateBookingPricingUI();
     setupMap();
     syncTopbarOffset();
     setupRevealObserver();

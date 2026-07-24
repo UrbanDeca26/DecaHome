@@ -76,30 +76,36 @@
             </label>
             <label>Guests
               <select id="guests">
-                <option>1 guest</option>
-                <option>2 guests</option>
-                <option>3 guests</option>
-                <option>4 guests</option>
-                <option>5 guests</option>
-                <option>6 guests</option>
-                <option>7 guests</option>
-                <option>8 guests</option>
-                <option>9 guests</option>
+                <option value="1">1 guest</option>
+                <option value="2">2 guests</option>
+                <option value="3">3 guests</option>
+                <option value="4">4 guests</option>
+                <option value="5">5 guests</option>
+                <option value="6">6 guests</option>
+                <option value="7">7 guests</option>
+                <option value="8">8 guests</option>
+                <option value="9">9 guests</option>
               </select>
             </label>
-            <label>Your name
-              <input id="guestName" type="text" placeholder="Enter your name" />
+            <label>Pets
+              <select id="pets">
+                <option value="0">No pets</option>
+                <option value="1">1 pet</option>
+                <option value="2">2 pets</option>
+                <option value="3">3 pets</option>
+              </select>
             </label>
-            <label>Your email
-              <input id="guestEmail" type="email" placeholder="Enter your email" />
-            </label>
-            <label>Phone number
-              <input id="guestPhone" type="tel" placeholder="Optional" />
-            </label>
-            <label class="span-2">Special request
-              <textarea id="guestNote" rows="3" placeholder="Add any details for the host..."></textarea>
-            </label>
+            <div class="booking-summary span-2" aria-live="polite">
+              <div class="booking-summary-row"><span>Base Rate</span><strong id="bookingBaseRate">₱0.00</strong></div>
+              <div class="booking-summary-row"><span>Extra Guests</span><strong id="bookingExtraGuests">₱0.00</strong></div>
+              <div class="booking-summary-row"><span>Pets</span><strong id="bookingPetCharge">₱0.00</strong></div>
+              <div class="booking-summary-divider"></div>
+              <div class="booking-summary-row total"><span>TOTAL</span><strong id="bookingTotal">₱0.00</strong></div>
+              <p class="booking-price-message" id="bookingPriceMessage">Select your dates to calculate the total.</p>
+              <button class="price-details-link" id="priceDetailsBtn" type="button" disabled>Price details</button>
+            </div>
           </div>
+
           <button class="btn btn-primary full" id="reserveBtn" type="button">Check availability</button>
         </aside>
 
@@ -328,6 +334,85 @@
       <h3 id="amenitiesModalTitle">Full amenity list</h3>
       <p>Enjoy all the amenities included with your stay.</p>
       <div class="amenity-modal-grid" id="amenitiesModalList"></div>
+    </div>
+  </div>
+  <div class="site-modal price-details-modal" id="priceDetailsModal" aria-hidden="true">
+    <div class="site-modal-card price-modal-card" role="dialog" aria-modal="true" aria-labelledby="priceDetailsTitle">
+      <button class="site-modal-close" id="closePriceDetails" type="button" aria-label="Close price details">×</button>
+      <div class="owner-modal-kicker">Price details</div>
+      <h3 id="priceDetailsTitle">How your total is calculated</h3>
+      <div class="price-modal-body" id="priceDetailsBody"></div>
+    </div>
+  </div>
+  <div class="site-modal booking-confirm-modal" id="bookingConfirmModal" aria-hidden="true">
+    <div class="site-modal-card booking-confirm-card" role="dialog" aria-modal="true" aria-labelledby="bookingConfirmTitle">
+      <button class="site-modal-close" id="closeBookingConfirm" type="button" aria-label="Close booking confirmation">×</button>
+      <div class="owner-modal-kicker">Booking confirmation</div>
+      <h3 id="bookingConfirmTitle">Review your stay</h3>
+
+      <div class="booking-confirm-summary">
+        <div class="booking-confirm-dates">
+          <div class="booking-confirm-chip"><span>Check-in</span><strong id="bookingConfirmCheckin">—</strong></div>
+          <div class="booking-confirm-chip"><span>Check-out</span><strong id="bookingConfirmCheckout">—</strong></div>
+          <div class="booking-confirm-chip"><span>Nights</span><strong id="bookingConfirmNights">—</strong></div>
+          <div class="booking-confirm-chip"><span>Guests</span><strong id="bookingConfirmGuests">—</strong></div>
+          <div class="booking-confirm-chip"><span>Pets</span><strong id="bookingConfirmPets">—</strong></div>
+        </div>
+
+        <div class="booking-confirm-breakdown">
+          <div class="booking-confirm-row"><span>Base Rate</span><strong id="bookingConfirmBaseRate">₱0.00</strong></div>
+          <div class="booking-confirm-row"><span>Extra Guests</span><strong id="bookingConfirmExtraGuests">₱0.00</strong></div>
+          <div class="booking-confirm-row"><span>Pets</span><strong id="bookingConfirmPetCharge">₱0.00</strong></div>
+          <div class="booking-confirm-divider"></div>
+          <div class="booking-confirm-row total"><span>TOTAL</span><strong id="bookingConfirmTotal">₱0.00</strong></div>
+        </div>
+
+        <p class="booking-confirm-note" id="bookingConfirmHint">Review your total, then proceed to enter your contact details.</p>
+      </div>
+
+      <section class="booking-confirm-stage" id="bookingConfirmStepReview">
+        <div class="booking-confirm-actions">
+          <button class="btn btn-secondary" id="bookingConfirmCancel" type="button">Cancel</button>
+          <button class="btn btn-primary" id="bookingConfirmProceed" type="button">Proceed to confirm</button>
+        </div>
+      </section>
+
+      <section class="booking-confirm-stage hidden" id="bookingConfirmStepDetails">
+        <form class="booking-confirm-form" id="bookingConfirmForm">
+          <div class="booking-confirm-grid">
+            <label>Guest name
+              <input id="guestName" type="text" placeholder="Enter your name" autocomplete="name" required />
+            </label>
+            <label>Email
+              <input id="guestEmail" type="email" placeholder="Enter your email" autocomplete="email" required />
+            </label>
+            <label>Phone number
+              <input id="guestPhone" type="tel" placeholder="Optional" autocomplete="tel" />
+            </label>
+            <label class="span-2">Special request
+              <textarea id="guestNote" rows="3" placeholder="Add any details for the host..."></textarea>
+            </label>
+          </div>
+
+          <div class="booking-confirm-actions">
+            <button class="btn btn-secondary" id="bookingConfirmBack" type="button">Back</button>
+            <button class="btn btn-primary" id="confirmBookingBtn" type="submit">Confirm booking</button>
+          </div>
+          <p class="booking-confirm-note">A receipt will be sent to you and the owner after confirmation.</p>
+        </form>
+      </section>
+
+      <section class="booking-confirm-stage hidden" id="bookingConfirmStepSuccess">
+        <div class="booking-success-card">
+          <div class="booking-success-icon">✓</div>
+          <h4>Booking confirmed</h4>
+          <p>Your receipt has been emailed to you and the owner.</p>
+          <p class="booking-success-reference">Reference <strong id="bookingSuccessRef">—</strong></p>
+          <div class="booking-confirm-actions">
+            <button class="btn btn-primary" id="closeBookingSuccess" type="button">Close</button>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 

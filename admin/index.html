@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Luxury Stay Admin Portal</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#161311" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="./css/admin.css" />
+</head>
+<body class="admin-page">
+  <div class="admin-app">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <div class="admin-brand-mark">LS</div>
+        <div>
+          <strong>Luxury Stay</strong>
+          <small>Admin Portal</small>
+        </div>
+      </div>
+
+      <nav class="admin-nav" aria-label="Admin navigation">
+        <a href="#dashboard">Dashboard</a>
+        <a href="#bookings">Bookings</a>
+        <a href="#availability">Availability</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#gallery">Gallery</a>
+        <a href="#amenities">Amenities</a>
+        <a href="#guide">Stay Guide</a>
+        <a href="#reviews">Reviews</a>
+        <a href="#luna">Luna AI</a>
+        <a href="#inquiries">Guest Inquiries</a>
+        <a href="#settings">Site Settings</a>
+      </nav>
+
+      <div class="admin-sidebar-footer">
+        <p id="adminClock">Checking session...</p>
+        <button class="btn btn-secondary full" id="logoutBtn" type="button">Logout</button>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <div>
+          <span class="section-pill">Dedicated Admin</span>
+          <h1>Manage the Luxury Stay property</h1>
+          <p>Bookings, content, media, pricing, and system settings in one place.</p>
+        </div>
+        <div class="admin-topbar-meta">
+          <span class="status-pill" id="authStatus">Checking session...</span>
+          <span class="status-pill muted" id="themeStatus">Auto theme</span>
+        </div>
+      </header>
+
+      <section class="admin-section" id="dashboard">
+        <div class="section-head row">
+          <div>
+            <span>Dashboard</span>
+            <h2>Overview</h2>
+            <p>At-a-glance property activity and quick actions.</p>
+          </div>
+        </div>
+        <div class="card-grid" id="dashboardCards"></div>
+        <div class="quick-actions" id="dashboardActions"></div>
+      </section>
+
+      <section class="admin-section" id="bookings">
+        <div class="section-head row">
+          <div>
+            <span>Bookings</span>
+            <h2>Manage reservations</h2>
+            <p>Track booking requests, update status, and review details.</p>
+          </div>
+        </div>
+        <div id="bookingsToolbar"></div>
+        <div class="split-layout">
+          <div id="bookingsTable"></div>
+          <div id="bookingDetails" class="side-panel"></div>
+        </div>
+      </section>
+
+      <section class="admin-section" id="availability">
+        <div class="section-head row">
+          <div>
+            <span>Availability</span>
+            <h2>Calendar controls</h2>
+            <p>Block dates, unblock dates, and review reserved periods.</p>
+          </div>
+        </div>
+        <div class="split-layout availability-layout">
+          <div id="availabilityPanel"></div>
+          <div id="availabilityList" class="side-panel"></div>
+        </div>
+      </section>
+
+      <section class="admin-section" id="pricing">
+        <div class="section-head row">
+          <div>
+            <span>Pricing</span>
+            <h2>Update rates</h2>
+            <p>Editing the rates updates the live estimator immediately.</p>
+          </div>
+        </div>
+        <div class="split-layout">
+          <div id="pricingFormWrap"></div>
+          <div id="pricingPreview" class="side-panel"></div>
+        </div>
+      </section>
+
+      <section class="admin-section" id="gallery">
+        <div class="section-head row">
+          <div>
+            <span>Gallery</span>
+            <h2>Media manager</h2>
+            <p>Upload, hide, feature, delete, and reorder photos or videos.</p>
+          </div>
+        </div>
+        <div id="galleryManager"></div>
+      </section>
+
+      <section class="admin-section" id="amenities">
+        <div class="section-head row">
+          <div>
+            <span>Amenities</span>
+            <h2>Manage amenity cards</h2>
+            <p>Add, edit, reorder, hide, or remove amenities from the listing.</p>
+          </div>
+        </div>
+        <div class="split-layout">
+          <div id="amenityFormWrap"></div>
+          <div id="amenityListWrap" class="side-panel"></div>
+        </div>
+      </section>
+
+      <section class="admin-section" id="guide">
+        <div class="section-head row">
+          <div>
+            <span>Stay Guide</span>
+            <h2>Rich content editor</h2>
+            <p>Update guest-facing information with links and structured text.</p>
+          </div>
+        </div>
+        <div id="guideEditor"></div>
+      </section>
+
+      <section class="admin-section" id="reviews">
+        <div class="section-head row">
+          <div>
+            <span>Reviews</span>
+            <h2>Verified guest reviews</h2>
+            <p>Feature, hide, or delete reviews without changing submission flow.</p>
+          </div>
+        </div>
+        <div id="reviewsManager"></div>
+      </section>
+
+      <section class="admin-section" id="luna">
+        <div class="section-head row">
+          <div>
+            <span>Luna AI</span>
+            <h2>Adjust assistant responses</h2>
+            <p>Keep Luna grounded in the property details and FAQs.</p>
+          </div>
+        </div>
+        <div id="lunaEditor"></div>
+      </section>
+
+      <section class="admin-section" id="inquiries">
+        <div class="section-head row">
+          <div>
+            <span>Guest inquiries</span>
+            <h2>Inbox</h2>
+            <p>Reply to, resolve, or review the messages guests submitted.</p>
+          </div>
+        </div>
+        <div id="inquiryManager"></div>
+      </section>
+
+      <section class="admin-section" id="settings">
+        <div class="section-head row">
+          <div>
+            <span>Site settings</span>
+            <h2>Brand and theme</h2>
+            <p>Edit property identity, logos, social links, hero imagery, and theme timing.</p>
+          </div>
+        </div>
+        <div id="siteSettingsEditor"></div>
+      </section>
+
+      <section class="admin-section hidden" id="developerSection" aria-hidden="true">
+        <div class="section-head row">
+          <div>
+            <span>Developer</span>
+            <h2>Technical maintenance</h2>
+            <p>System checks for authorized administrators only.</p>
+          </div>
+        </div>
+        <div id="developerPanel"></div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./js/admin.js"></script>
+</body>
+</html>

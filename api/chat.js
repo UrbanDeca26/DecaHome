@@ -145,9 +145,9 @@ function localAnswer(property, amenities, message) {
     });
   }
 
-  if (/\b(price|rate|cost|pricing)\b/.test(q)) {
+  if (/(price|rate|cost|pricing)/.test(q)) {
     return reply({
-      reply: `Here’s the pricing guide: ${property.pricing.slice(0, 3).join(' · ')}${property.pricing.length > 3 ? ' · ...' : ''}`,
+      reply: `Pricing is calculated live from the booking card. Weekdays: ${property.weekdayRate || '—'} · Weekends: ${property.weekendRate || '—'} · Included guests: ${property.includedGuests || '—'} · Extra guest fee: ${property.extraGuestFee || '—'} · Pet fee: ${property.petFee || '—'}`,
       intent: 'property_info',
       risk: 'low',
       showInquiryForm: false,
@@ -302,6 +302,7 @@ Property facts:
 - Capacity: ${property.capacity}
 - Check-in: ${property.checkIn}
 - Check-out: ${property.checkOut}
+- Pricing: Weekday rate ${property.weekdayRate || '—'} | Weekend rate ${property.weekendRate || '—'} | Included guests ${property.includedGuests || '—'} | Extra guest fee ${property.extraGuestFee || '—'} | Pet fee ${property.petFee || '—'} | Max guests ${property.maxGuests || property.guestCapacity || '—'} | Max pets ${property.maxPets || '—'}
 - Price guide: ${property.pricing.join(' | ')}
 - Parking: ${property.parking}
 - Nearby: ${property.nearby.join(', ')}
