@@ -104,16 +104,25 @@
     if (!target) return;
     const section = target.closest('.admin-section, .panel, .settings-group, .card-item') || target;
     if (section && typeof section.scrollIntoView === 'function') {
-      section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    window.setTimeout(() => {
+      try {
+        window.scrollBy({ top: -110, behavior: 'smooth' });
+      } catch (_) {
+        window.scrollBy(0, -110);
+      }
+    }, 80);
     const flashTarget = target.closest('.field, .settings-group, .card-item, .admin-form') || target;
     flashTarget.classList.add('editor-target-flash');
-    window.setTimeout(() => flashTarget.classList.remove('editor-target-flash'), 1600);
+    window.setTimeout(() => flashTarget.classList.remove('editor-target-flash'), 1800);
     window.setTimeout(() => {
       if (typeof target.focus === 'function') target.focus({ preventScroll: true });
       if (typeof target.select === 'function') target.select();
-    }, 150);
+    }, 180);
   }
+
+  window.__luxuryStayFocusEditor = focusEditor;
 
   function currentSummary() {
     const today = new Date();
@@ -442,7 +451,7 @@
               <strong>${S.escapeHtml(item.title)}</strong>
               <span>${S.escapeHtml(item.meta)}</span>
             </div>
-            <button class="btn btn-secondary small" type="button" data-map-href="${S.escapeHtml(item.href)}" data-map-focus="${S.escapeHtml(item.focus || '')}">Edit</button>
+            <button class="btn btn-secondary small" type="button" data-map-href="${S.escapeHtml(item.href)}" data-map-focus="${S.escapeHtml(item.focus || '')}" onclick='window.__luxuryStayFocusEditor && window.__luxuryStayFocusEditor(${JSON.stringify(item.focus || '')})'>Edit</button>
           </div>
           <p>${S.escapeHtml(item.note)}</p>
         </div>
@@ -652,7 +661,7 @@
       if (isToday) cls += ' is-today';
       const titleText = `${dateIso} — ${label}${data?.note ? ` · ${data.note}` : ''}`;
       cells.push(`
-        <button class="${cls}" data-calendar-date="${dateIso}" type="button" title="${S.escapeHtml(titleText)}" aria-label="${S.escapeHtml(titleText)}">
+        <button class="${cls}" data-calendar-date="${dateIso}" type="button" title="${S.escapeHtml(titleText)}" aria-label="${S.escapeHtml(titleText)}" onclick='window.__luxuryStayToggleCalendarDate && window.__luxuryStayToggleCalendarDate(${JSON.stringify(dateIso)})'>
           <span class="day-num">${day}</span>
           <span class="day-meta">${S.escapeHtml(label)}</span>
         </button>
@@ -699,10 +708,34 @@
     broadcastUpdate('availability', ['blockedDates']);
   }
 
+  function addBlockDateFromForm() {
+    const date = String($('#blockDateInput')?.value || '').trim();
+    if (!date) return window.alert('Choose a date first.');
+    const type = String($('#blockDateType')?.value || 'blocked').trim() || 'blocked';
+    const note = String($('#blockDateNote')?.value || '').trim();
+    const existing = state.blockedDates.find((item) => item.date === date);
+    if (existing) {
+      existing.type = type;
+      existing.note = note;
+    } else {
+      state.blockedDates.unshift({ date, type, note });
+    }
+    state.calendarMonth = new Date(`${date}T00:00:00Z`);
+    S.saveBlockedDates(state.blockedDates);
+    renderCalendar();
+    renderDashboard();
+    broadcastUpdate('availability', ['blockedDates']);
+    window.alert(`Saved ${type} date for ${date}.`);
+  }
+
+  window.__luxuryStayAddBlockDate = addBlockDateFromForm;
+  window.__luxuryStayToggleCalendarDate = toggleBlockDate;
+
   function removeBlockDate(dateIso) {
     state.blockedDates = state.blockedDates.filter((item) => item.date !== dateIso);
     S.saveBlockedDates(state.blockedDates);
     renderCalendar();
+    renderDashboard();
     broadcastUpdate('availability', ['blockedDates']);
   }
 
@@ -1000,7 +1033,7 @@
             <strong>${S.escapeHtml(section.label)}</strong>
             <span>${section.items.length} entries</span>
           </div>
-          <button class="btn btn-primary small" type="button" data-focus-target="${S.escapeHtml(section.focus)}">Edit</button>
+          <button class="btn btn-primary small" type="button" data-focus-target="${S.escapeHtml(section.focus)}" onclick='window.__luxuryStayFocusEditor && window.__luxuryStayFocusEditor(${JSON.stringify(section.focus)})'>Edit</button>
         </div>
         <p>${S.escapeHtml(section.note)}</p>
       </div>
@@ -1046,7 +1079,7 @@
       <div class="card-item">
         <div class="card-item-head">
           <div><strong>${S.escapeHtml(item.label)}</strong></div>
-          <button class="btn btn-primary small" type="button" data-focus-target="${S.escapeHtml(item.focus)}">Edit</button>
+          <button class="btn btn-primary small" type="button" data-focus-target="${S.escapeHtml(item.focus)}" onclick='window.__luxuryStayFocusEditor && window.__luxuryStayFocusEditor(${JSON.stringify(item.focus)})'>Edit</button>
         </div>
         <p>${S.escapeHtml(item.value || '—')}</p>
       </div>
@@ -1097,7 +1130,7 @@
       <div class="card-item">
         <div class="card-item-head">
           <div><strong>${S.escapeHtml(item.label)}</strong></div>
-          <button class="btn btn-primary small" type="button" data-focus-target="${S.escapeHtml(item.focus)}">Edit</button>
+          <button class="btn btn-primary small" type="button" data-focus-target="${S.escapeHtml(item.focus)}" onclick='window.__luxuryStayFocusEditor && window.__luxuryStayFocusEditor(${JSON.stringify(item.focus)})'>Edit</button>
         </div>
         <p>${S.escapeHtml(item.value || '—')}</p>
       </div>
@@ -1568,17 +1601,7 @@
       state.calendarMonth = new Date(Date.UTC(state.calendarMonth.getUTCFullYear(), state.calendarMonth.getUTCMonth() + 1, 1));
       renderCalendar();
     });
-    $('#addBlockDateBtn')?.addEventListener('click', () => {
-      const date = String($('#blockDateInput').value || '').trim();
-      if (!date) return alert('Choose a date first.');
-      const type = String($('#blockDateType').value || 'blocked');
-      const note = String($('#blockDateNote').value || '').trim();
-      if (!state.blockedDates.find((item) => item.date === date)) {
-        state.blockedDates.unshift({ date, type, note });
-      }
-      S.saveBlockedDates(state.blockedDates);
-      renderCalendar();
-    });
+    $('#addBlockDateBtn')?.addEventListener('click', () => addBlockDateFromForm());
     $('#clearBlocksBtn')?.addEventListener('click', clearBlockedDates);
     $('#bookingModalSave')?.addEventListener('click', saveSelectedBookingStatus);
     $('#bookingModalCancel')?.addEventListener('click', cancelSelectedBooking);

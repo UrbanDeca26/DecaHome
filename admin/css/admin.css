@@ -514,6 +514,10 @@ tbody tr:hover { background: rgba(155,74,54,.035); }
   line-height: 1.6;
 }
 
+.admin-section, .panel, .settings-group, .card-item, .field {
+  scroll-margin-top: 120px;
+}
+
 .editor-target-flash {
   border-color: rgba(155,74,54,.38) !important;
   box-shadow: 0 0 0 4px rgba(155,74,54,.12), var(--shadow-soft) !important;
