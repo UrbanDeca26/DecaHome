@@ -6,7 +6,7 @@
   async function checkExistingSession() {
     try {
       const data = await window.LuxuryAdminStore.apiFetch('/api/admin-status', { method: 'GET' });
-      if (data.loggedIn) window.location.replace('/admin/');
+      if (data.loggedIn) window.location.replace('./');
     } catch (_) {}
   }
 
@@ -24,7 +24,7 @@
         method: 'POST',
         body: JSON.stringify({ password }),
       });
-      window.location.replace('/admin/');
+      window.location.replace('./');
     } catch (err) {
       alert(err.message || 'Login failed');
     } finally {

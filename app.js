@@ -2039,7 +2039,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
   }
 
   function openOwnerLogin() {
-    window.location.href = '/admin/login.html';
+    window.location.href = './admin/login.html';
   }
 
   function closeOwnerLogin() {

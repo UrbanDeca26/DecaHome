@@ -73,12 +73,12 @@
     return S.apiFetch('/api/admin-status', { method: 'GET' }).then((data) => {
       state.developerHealth.auth = data.loggedIn ? 'Authenticated' : 'Not logged in';
       if (!data.loggedIn) {
-        window.location.replace('/admin/login.html');
+        window.location.replace('./login.html');
         return false;
       }
       return true;
     }).catch(() => {
-      window.location.replace('/admin/login.html');
+      window.location.replace('./login.html');
       return false;
     });
   }
@@ -943,7 +943,7 @@
 
     $('#logoutBtn')?.addEventListener('click', async () => {
       try { await S.apiFetch('/api/admin-logout', { method: 'POST' }); } catch (_) {}
-      window.location.replace('/admin/login.html');
+      window.location.replace('./login.html');
     });
 
     $('#refreshBookingsBtn')?.addEventListener('click', loadBookings);
