@@ -175,6 +175,8 @@
     pendingBookingPricing: null,
     bookings: [],
     bookingSummary: null,
+    availability: [],
+    calendarMonthOffset: 0,
     deletedMedia: loadJson('luxury_stay_deleted_media_v4', []),
     dashboardRefreshTimer: null,
   };
@@ -212,6 +214,9 @@
       checked_out: 'Checked out',
       cancelled: 'Cancelled',
       rejected: 'Rejected',
+      blocked: 'Blocked',
+      maintenance: 'Maintenance',
+      owner_stay: 'Owner stay',
     };
     return map[key] || key.replace(/_/g, ' ');
   }
@@ -221,6 +226,7 @@
     if (key === 'confirmed' || key === 'completed' || key === 'checked_out') return 'good';
     if (key === 'checked_in') return 'info';
     if (key === 'pending') return 'warn';
+    if (key === 'blocked' || key === 'maintenance' || key === 'owner_stay') return 'neutral';
     if (key === 'cancelled' || key === 'rejected') return 'danger';
     return 'neutral';
   }
@@ -287,9 +293,19 @@
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'Failed to update booking');
-    await fetchOwnerBookings();
-    renderOwnerBookings();
-    renderOwnerAccounting();
+    await refreshOwnerDashboard();
+    return data;
+  }
+
+  async function createAvailabilityBlock(payload) {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'block_date', ...payload }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Failed to block date');
     return data;
   }
 
@@ -316,6 +332,233 @@
     `;
   }
 
+  function renderOwnerContentMap() {
+    const map = $('#ownerCmsMap');
+    if (!map) return;
+    if (!state.admin) {
+      map.innerHTML = '';
+      return;
+    }
+
+    const cards = [
+      { label: 'Bookings', target: '#ownerBookingsCard', note: 'Confirm, cancel, and send review invitations.' },
+      { label: 'Accounting', target: '#ownerAccountingCard', note: 'Weekly, monthly, and yearly earnings.' },
+      { label: 'Calendar', target: '#ownerCalendarCard', note: 'Block dates, maintain stays, and view reservations.' },
+      { label: 'Hero & booking', target: '#settings-hero', note: 'Edit the public hero and booking labels.' },
+      { label: 'Pricing', target: '#settings-pricing', note: 'Keep the booking total in sync.' },
+      { label: 'Location & vehicle', target: '#settings-location', note: 'Edit address, parking, maps, and check-in/out.' },
+      { label: 'Stay guide', target: '#settings-guide', note: 'Edit rules, nearby places, and arrivals.' },
+      { label: 'Amenities', target: '#ownerAmenityCard', note: 'Add, edit, hide, restore, and feature.' },
+      { label: 'Reviews', target: '#ownerReviewCard', note: 'Moderate verified guest reviews.' },
+      { label: 'Gallery', target: '#ownerMediaCard', note: 'Feature, hide, restore, or delete media.' },
+      { label: 'Site settings', target: '#settings-contact', note: 'Contact info and footer details.' },
+    ];
+
+    map.innerHTML = cards.map((item) => `
+      <button type="button" class="cms-map-card" data-cms-target="${escapeHtml(item.target)}">
+        <span class="cms-map-kicker">Edit</span>
+        <strong>${escapeHtml(item.label)}</strong>
+        <p>${escapeHtml(item.note)}</p>
+      </button>
+    `).join('');
+
+  }
+
+  function focusCmsTarget(targetSelector) {
+    const target = document.querySelector(targetSelector || '');
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.classList.add('flash-focus');
+    window.setTimeout(() => target.classList.remove('flash-focus'), 1400);
+  }
+
+  function renderOwnerCalendar() {
+    const list = $('#ownerCalendarList');
+    if (!list) return;
+    if (!state.admin) {
+      list.innerHTML = '<div class="owner-empty">Sign in to manage blocked dates and reservations.</div>';
+      return;
+    }
+
+    const monthBase = new Date();
+    monthBase.setUTCDate(1);
+    monthBase.setUTCMonth(monthBase.getUTCMonth() + Number(state.calendarMonthOffset || 0));
+    const monthStart = new Date(Date.UTC(monthBase.getUTCFullYear(), monthBase.getUTCMonth(), 1));
+    const nextMonth = new Date(Date.UTC(monthBase.getUTCFullYear(), monthBase.getUTCMonth() + 1, 1));
+    const monthLabel = new Intl.DateTimeFormat('en-PH', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(monthStart);
+    const todayIso = getTodayLocalISO();
+    const year = monthStart.getUTCFullYear();
+    const month = monthStart.getUTCMonth();
+    const firstDow = monthStart.getUTCDay();
+    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    const leading = Array.from({ length: firstDow }, () => '<span class="calendar-day empty" aria-hidden="true"></span>');
+    const bookingRows = Array.isArray(state.bookings) ? state.bookings : [];
+    const dayStatuses = new Map();
+
+    for (const booking of bookingRows) {
+      const status = normalizeBookingStatus(booking.status);
+      if (isCancelledStatus(status)) continue;
+      const dates = getBookingWindowDates(booking.checkin, booking.checkout);
+      if (!dates.length && booking.checkin) dates.push(String(booking.checkin).slice(0, 10));
+      for (const date of dates) {
+        if (date < monthStart.toISOString().slice(0, 10) || date >= nextMonth.toISOString().slice(0, 10)) continue;
+        const nextStatus = getCalendarDateType(status);
+        const current = dayStatuses.get(date);
+        const priority = { available: 0, reserved: 1, blocked: 2, maintenance: 3, owner_stay: 4 };
+        if (!current || priority[nextStatus] >= priority[current.type]) {
+          dayStatuses.set(date, { type: nextStatus, status, label: getDateLabelForBlock(status), ref: booking.bookingRef || booking.id || '', note: booking.note || '' });
+        }
+      }
+    }
+
+    const days = Array.from({ length: daysInMonth }, (_, index) => {
+      const day = index + 1;
+      const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const item = dayStatuses.get(iso);
+      const classes = ['calendar-day'];
+      if (iso < todayIso) classes.push('past');
+      if (item) classes.push(`is-${item.type}`);
+      const marker = item ? (item.type === 'maintenance' ? '🔧' : item.type === 'owner_stay' ? '🏠' : '✕') : '';
+      const label = item ? item.label : 'Available';
+      const note = item?.note ? ` title="${escapeHtml(item.note)}"` : '';
+      return `<button type="button" class="${classes.join(' ')}" data-calendar-date="${iso}"${note}><span class="day-num">${day}</span>${item ? `<span class="day-marker">${marker}</span><small>${escapeHtml(label)}</small>` : '<small>Available</small>'}</button>`;
+    });
+
+    const blocks = getManagementEntries(bookingRows).sort((a, b) => String(a.checkin || '').localeCompare(String(b.checkin || '')));
+    const blockList = blocks.length ? blocks.map((booking) => `
+      <article class="calendar-block-card ${normalizeBookingStatus(booking.status)}">
+        <div>
+          <strong>${escapeHtml(formatBookingDisplayDate(booking.checkin))}</strong>
+          <span>${escapeHtml(bookingStatusLabel(booking.status))} · ${escapeHtml(booking.note || 'No note')}</span>
+        </div>
+        <button class="btn btn-secondary owner-sm" type="button" data-block-action="unblock" data-booking-ref="${escapeHtml(booking.bookingRef)}">Unblock</button>
+      </article>`).join('') : '<div class="owner-empty">No blocked or maintenance dates yet.</div>';
+
+    list.innerHTML = `
+      <div class="calendar-toolbar">
+        <div>
+          <h4>${escapeHtml(monthLabel)}</h4>
+          <p>Reserved, blocked, maintenance, and owner stay dates are color-coded.</p>
+        </div>
+        <div class="calendar-actions">
+          <button class="btn btn-secondary owner-sm" type="button" data-calendar-nav="prev">‹</button>
+          <button class="btn btn-secondary owner-sm" type="button" data-calendar-nav="today">Today</button>
+          <button class="btn btn-secondary owner-sm" type="button" data-calendar-nav="next">›</button>
+        </div>
+      </div>
+      <div class="calendar-legend" aria-label="Calendar legend">
+        <span class="calendar-pill available">● Available</span>
+        <span class="calendar-pill reserved">✕ Reserved</span>
+        <span class="calendar-pill blocked">✕ Blocked</span>
+        <span class="calendar-pill maintenance">🔧 Maintenance</span>
+        <span class="calendar-pill owner-stay">🏠 Owner stay</span>
+      </div>
+      <div class="calendar-grid-head">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+      <div class="calendar-grid">${leading.join('')}${days.join('')}</div>
+      <div class="calendar-block-panel">
+        <div class="owner-card-inline">
+          <h4>Quick block date</h4>
+          <form class="calendar-block-form" id="calendarBlockForm">
+            <div class="owner-row">
+              <label>Date <input id="calendarBlockDate" type="date" required /></label>
+              <label>Type
+                <select id="calendarBlockType">
+                  <option value="blocked">Blocked</option>
+                  <option value="maintenance">Maintenance</option>
+                  <option value="owner_stay">Owner stay</option>
+                </select>
+              </label>
+            </div>
+            <label>Note <input id="calendarBlockNote" type="text" placeholder="Optional reason" /></label>
+            <div class="owner-actions-row">
+              <button class="btn btn-primary owner-sm" type="submit">Block date</button>
+              <button class="btn btn-secondary owner-sm" type="button" id="calendarClearDate">Clear</button>
+            </div>
+          </form>
+        </div>
+        <div class="owner-card-inline">
+          <h4>Current blocks</h4>
+          <div class="calendar-block-list">${blockList}</div>
+        </div>
+      </div>
+    `;
+
+    $$('#ownerCalendarList [data-calendar-nav]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.calendarNav;
+        if (action === 'prev') state.calendarMonthOffset = Number(state.calendarMonthOffset || 0) - 1;
+        if (action === 'next') state.calendarMonthOffset = Number(state.calendarMonthOffset || 0) + 1;
+        if (action === 'today') state.calendarMonthOffset = 0;
+        renderOwnerCalendar();
+      });
+    });
+
+    $$('#ownerCalendarList [data-calendar-date]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const input = $('#calendarBlockDate');
+        if (input) input.value = button.dataset.calendarDate || '';
+        $('#calendarBlockType')?.focus();
+      });
+    });
+
+    $('#calendarClearDate')?.addEventListener('click', () => {
+      const input = $('#calendarBlockDate');
+      const note = $('#calendarBlockNote');
+      if (input) input.value = '';
+      if (note) note.value = '';
+    });
+
+    $('#calendarBlockForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const date = String($('#calendarBlockDate')?.value || '').trim();
+      const type = String($('#calendarBlockType')?.value || 'blocked').trim();
+      const note = String($('#calendarBlockNote')?.value || '').trim();
+      if (!date) {
+        alert('Choose a date first.');
+        return;
+      }
+      const btn = $('#calendarBlockForm button[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Blocking...';
+      }
+      try {
+        await createAvailabilityBlock({ date, type, note });
+        await refreshOwnerDashboard();
+        $('#calendarBlockForm')?.reset();
+        state.calendarMonthOffset = 0;
+        renderOwnerCalendar();
+      } catch (err) {
+        alert(err.message || 'Could not block date');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Block date';
+        }
+      }
+    });
+
+    $$('#ownerCalendarList [data-block-action="unblock"]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const bookingRef = button.dataset.bookingRef;
+        if (!bookingRef) return;
+        if (!window.confirm('Unblock this date?')) return;
+        const prev = button.disabled;
+        button.disabled = true;
+        try {
+          await updateBookingLedger('set_status', bookingRef, 'cancelled');
+          await refreshOwnerDashboard();
+        } catch (err) {
+          alert(err.message || 'Could not unblock date');
+        } finally {
+          button.disabled = prev;
+        }
+      });
+    });
+  }
+
   function renderOwnerBookings() {
     const list = $('#ownerBookingsList');
     if (!list) return;
@@ -325,7 +568,7 @@
     }
 
     const summary = state.bookingSummary || emptyBookingSummary();
-    const bookings = Array.isArray(state.bookings) ? state.bookings : [];
+    const bookings = getGuestBookings(state.bookings);
 
     const summaryChips = `
       <div class="booking-chip-row">
@@ -400,9 +643,26 @@
   }
 
   async function refreshOwnerDashboard() {
-    await fetchOwnerBookings();
+    await Promise.all([fetchOwnerBookings(), fetchAvailability()]);
     renderOwnerBookings();
     renderOwnerAccounting();
+    renderOwnerCalendar();
+    renderOwnerContentMap();
+  }
+
+  async function fetchAvailability() {
+    try {
+      const res = await fetch('/api/availability', { credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to load availability');
+      const rows = Array.isArray(data.bookings) ? data.bookings : Array.isArray(data.availability) ? data.availability : [];
+      state.availability = rows.filter((row) => row && typeof row === 'object');
+      return state.availability;
+    } catch (err) {
+      console.error(err);
+      state.availability = [];
+      return state.availability;
+    }
   }
 
   function readFileAsDataUrl(file) {
@@ -606,6 +866,12 @@
     const petCharge = petCount * rules.petFee * nights;
     const total = baseRate + extraGuestCharge + petCharge;
 
+
+    const unavailable = getUnavailableRange(checkin, checkout);
+    if (unavailable) {
+      return { valid: false, error: unavailable.message };
+    }
+
     return {
       valid: true,
       nights,
@@ -641,6 +907,96 @@
         petFee: rules.petFee,
       },
     };
+  }
+
+  function getBookingWindowDates(checkin, checkout) {
+    const start = parseBookingDate(checkin);
+    const end = parseBookingDate(checkout);
+    if (!start || !end) return [];
+    const days = [];
+    let cursor = new Date(start.getTime());
+    while (cursor < end) {
+      days.push(cursor.toISOString().slice(0, 10));
+      cursor = addUtcDays(cursor, 1);
+    }
+    return days;
+  }
+
+  function normalizeBookingStatus(status) {
+    return String(status || 'confirmed').toLowerCase();
+  }
+
+  function isBlockingStatus(status) {
+    const key = normalizeBookingStatus(status);
+    return ['pending', 'confirmed', 'completed', 'checked_in', 'checked_out', 'blocked', 'maintenance', 'owner_stay'].includes(key);
+  }
+
+  function isManagementStatus(status) {
+    const key = normalizeBookingStatus(status);
+    return ['blocked', 'maintenance', 'owner_stay'].includes(key);
+  }
+
+  function isRevenueStatus(status) {
+    const key = normalizeBookingStatus(status);
+    return ['confirmed', 'completed', 'checked_out'].includes(key);
+  }
+
+  function isCancelledStatus(status) {
+    const key = normalizeBookingStatus(status);
+    return ['cancelled', 'rejected'].includes(key);
+  }
+
+  function getCalendarDateType(status) {
+    const key = normalizeBookingStatus(status);
+    if (key === 'blocked') return 'blocked';
+    if (key === 'maintenance') return 'maintenance';
+    if (key === 'owner_stay') return 'owner_stay';
+    if (['confirmed', 'completed', 'checked_in', 'checked_out', 'pending'].includes(key)) return 'reserved';
+    return 'available';
+  }
+
+  function getUnavailableRange(checkin, checkout) {
+    const start = parseBookingDate(checkin);
+    const end = parseBookingDate(checkout);
+    if (!start || !end) return null;
+    const rows = Array.isArray(state.availability) ? state.availability : [];
+    const target = getBookingWindowDates(checkin, checkout);
+    for (const row of rows) {
+      const rowStatus = normalizeBookingStatus(row.status);
+      if (!isBlockingStatus(rowStatus) || isCancelledStatus(rowStatus)) continue;
+      const rowDates = getBookingWindowDates(row.checkin, row.checkout);
+      if (!rowDates.length) {
+        const single = String(row.checkin || '').trim();
+        if (single && target.includes(single)) {
+          return { message: `Those dates are unavailable because ${bookingStatusLabel(rowStatus).toLowerCase()} already exists.` };
+        }
+        continue;
+      }
+      if (rowDates.some((day) => target.includes(day))) {
+        return { message: `Those dates are unavailable because ${bookingStatusLabel(rowStatus).toLowerCase()} already exists.` };
+      }
+    }
+    return null;
+  }
+
+  function getAvailabilityEntries(source = state.availability) {
+    return Array.isArray(source) ? source.filter((item) => isBlockingStatus(item.status) && !isCancelledStatus(item.status)) : [];
+  }
+
+  function getManagementEntries(source = state.bookings) {
+    return Array.isArray(source) ? source.filter((item) => isManagementStatus(item.status) && !isCancelledStatus(item.status)) : [];
+  }
+
+  function getGuestBookings(source = state.bookings) {
+    return Array.isArray(source) ? source.filter((item) => !isManagementStatus(item.status) && !isCancelledStatus(item.status)) : [];
+  }
+
+  function getDateLabelForBlock(status) {
+    const key = normalizeBookingStatus(status);
+    if (key === 'blocked') return 'Blocked';
+    if (key === 'maintenance') return 'Maintenance';
+    if (key === 'owner_stay') return 'Owner stay';
+    return 'Reserved';
   }
 
   function currentPropertySnapshot() {
@@ -982,57 +1338,91 @@
     const list = $('#ownerSettingsList');
     if (!list) return;
     if (!state.admin) {
-      list.innerHTML = '<div class="owner-empty">Sign in to edit location, pricing, and policies.</div>';
+      list.innerHTML = '<div class="owner-empty">Sign in to edit the public-page content.</div>';
       return;
     }
+
     const s = getSettings();
     list.innerHTML = `
+      <div class="owner-subnav" aria-label="Jump to editor">
+        <button type="button" data-jump-settings="settings-hero">Hero & booking</button>
+        <button type="button" data-jump-settings="settings-pricing">Pricing</button>
+        <button type="button" data-jump-settings="settings-location">Location & vehicle</button>
+        <button type="button" data-jump-settings="settings-guide">Stay guide</button>
+        <button type="button" data-jump-settings="settings-contact">Site settings</button>
+      </div>
       <form class="owner-form owner-settings-form" id="ownerSettingsForm">
-        <h4>Property settings</h4>
-        <div class="owner-row">
-          <label>Property name <input id="settingsPropertyName" type="text" value="${escapeHtml(s.name)}" /></label>
-          <label>Maximum guests <input id="settingsGuestCapacity" type="number" min="1" max="20" value="${escapeHtml(String(s.maxGuests || s.guestCapacity || 9))}" /></label>
+        <div class="owner-form-section" id="settings-hero">
+          <h4>Hero & booking</h4>
+          <div class="owner-row">
+            <label>Property name <input id="settingsPropertyName" type="text" value="${escapeHtml(s.name)}" /></label>
+            <label>Maximum guests <input id="settingsGuestCapacity" type="number" min="1" max="20" value="${escapeHtml(String(s.maxGuests || s.guestCapacity || 9))}" /></label>
+          </div>
+          <div class="owner-row">
+            <label>Hero eyebrow <input id="settingsHeroEyebrow" type="text" value="${escapeHtml(s.heroEyebrow || '')}" /></label>
+            <label>Host name <input id="settingsHostName" type="text" value="${escapeHtml(s.hostName || 'Donnie')}" /></label>
+          </div>
+          <label>Hero title <input id="settingsHeroTitle" type="text" value="${escapeHtml(s.heroTitle || '')}" /></label>
+          <label>Hero subtitle <textarea id="settingsHeroSubtitle">${escapeHtml(s.heroSubtitle || '')}</textarea></label>
         </div>
-        <div class="owner-row">
-          <label>Hero eyebrow <input id="settingsHeroEyebrow" type="text" value="${escapeHtml(s.heroEyebrow || '')}" /></label>
-          <label>Host name <input id="settingsHostName" type="text" value="${escapeHtml(s.hostName || 'Donnie')}" /></label>
+
+        <div class="owner-form-section" id="settings-pricing">
+          <h4>Pricing manager</h4>
+          <div class="owner-row">
+            <label>Weekday rate <input id="settingsWeekdayRate" type="number" min="0" step="1" value="${escapeHtml(String(s.weekdayRate ?? 1999))}" /></label>
+            <label>Weekend rate <input id="settingsWeekendRate" type="number" min="0" step="1" value="${escapeHtml(String(s.weekendRate ?? 2199))}" /></label>
+          </div>
+          <div class="owner-row">
+            <label>Included guests <input id="settingsIncludedGuests" type="number" min="1" step="1" value="${escapeHtml(String(s.includedGuests ?? 2))}" /></label>
+            <label>Extra guest fee <input id="settingsExtraGuestFee" type="number" min="0" step="1" value="${escapeHtml(String(s.extraGuestFee ?? 400))}" /></label>
+          </div>
+          <div class="owner-row">
+            <label>Pet fee <input id="settingsPetFee" type="number" min="0" step="1" value="${escapeHtml(String(s.petFee ?? 200))}" /></label>
+            <label>Maximum pets <input id="settingsMaxPets" type="number" min="0" step="1" value="${escapeHtml(String(s.maxPets ?? 3))}" /></label>
+          </div>
+          <label>Security deposit <input id="settingsSecurityDeposit" type="text" value="${escapeHtml(s.securityDeposit)}" /></label>
         </div>
-        <div class="owner-row">
-          <label>Weekday rate <input id="settingsWeekdayRate" type="number" min="0" step="1" value="${escapeHtml(String(s.weekdayRate ?? 1999))}" /></label>
-          <label>Weekend rate <input id="settingsWeekendRate" type="number" min="0" step="1" value="${escapeHtml(String(s.weekendRate ?? 2199))}" /></label>
+
+        <div class="owner-form-section" id="settings-location">
+          <h4>Location & vehicle</h4>
+          <div class="owner-row">
+            <label>Exact location <input id="settingsArea" type="text" value="${escapeHtml(s.area)}" /></label>
+            <label>Building / unit detail <input id="settingsBuilding" type="text" value="${escapeHtml(s.building)}" /></label>
+          </div>
+          <div class="owner-row">
+            <label>Check-in <input id="settingsCheckIn" type="text" value="${escapeHtml(s.checkIn)}" /></label>
+            <label>Check-out <input id="settingsCheckOut" type="text" value="${escapeHtml(s.checkOut)}" /></label>
+          </div>
+          <label>Parking note <textarea id="settingsParking">${escapeHtml(s.parking)}</textarea></label>
+          <div class="owner-row">
+            <label>Car parking rate <input id="settingsCarRate" type="text" value="${escapeHtml(s.parkingRates.car)}" /></label>
+            <label>Motorcycle parking rate <input id="settingsMotorRate" type="text" value="${escapeHtml(s.parkingRates.motorcycle)}" /></label>
+          </div>
+          <div class="owner-row">
+            <label>Google Maps URL <input id="settingsGoogleMapsUrl" type="text" value="${escapeHtml(s.googleMapsUrl || CONFIG.googleMapsUrl)}" /></label>
+            <label>Waze URL <input id="settingsWazeUrl" type="text" value="${escapeHtml(s.wazeUrl || CONFIG.wazeUrl)}" /></label>
+          </div>
         </div>
-        <div class="owner-row">
-          <label>Included guests <input id="settingsIncludedGuests" type="number" min="1" step="1" value="${escapeHtml(String(s.includedGuests ?? 2))}" /></label>
-          <label>Extra guest fee <input id="settingsExtraGuestFee" type="number" min="0" step="1" value="${escapeHtml(String(s.extraGuestFee ?? 400))}" /></label>
+
+        <div class="owner-form-section" id="settings-guide">
+          <h4>Stay guide</h4>
+          <label>Nearby places <textarea id="settingsNearby">${escapeHtml(listToTextarea(s.nearby))}</textarea></label>
+          <label>Booking requirements <textarea id="settingsBookingRequirements">${escapeHtml(listToTextarea(s.bookingRequirements))}</textarea></label>
+          <label>Self check-in steps <textarea id="settingsSelfCheckIn">${escapeHtml(listToTextarea(s.selfCheckIn))}</textarea></label>
+          <label>Checkout reminders <textarea id="settingsCheckout">${escapeHtml(listToTextarea(s.checkout))}</textarea></label>
+          <label>House rules <textarea id="settingsHouseRules">${escapeHtml(listToTextarea(s.houseRules))}</textarea></label>
+          <label>Pricing guide <textarea id="settingsPricing">${escapeHtml(listToTextarea(s.pricing))}</textarea></label>
         </div>
-        <div class="owner-row">
-          <label>Pet fee <input id="settingsPetFee" type="number" min="0" step="1" value="${escapeHtml(String(s.petFee ?? 200))}" /></label>
-          <label>Maximum pets <input id="settingsMaxPets" type="number" min="0" step="1" value="${escapeHtml(String(s.maxPets ?? 3))}" /></label>
+
+        <div class="owner-form-section" id="settings-contact">
+          <h4>Site settings</h4>
+          <div class="owner-row">
+            <label>Contact email <input id="settingsContactEmail" type="email" value="${escapeHtml(s.contactEmail || '')}" placeholder="owner@example.com" /></label>
+            <label>Contact phone <input id="settingsContactPhone" type="text" value="${escapeHtml(s.contactPhone || '')}" placeholder="+63..." /></label>
+          </div>
+          <p class="muted">These settings drive the hero, pricing, guide, booking confirmation, and Luna responses.</p>
         </div>
-        <label>Hero title <input id="settingsHeroTitle" type="text" value="${escapeHtml(s.heroTitle || '')}" /></label>
-        <label>Hero subtitle <textarea id="settingsHeroSubtitle">${escapeHtml(s.heroSubtitle || '')}</textarea></label>
-        <div class="owner-row">
-          <label>Exact location <input id="settingsArea" type="text" value="${escapeHtml(s.area)}" /></label>
-          <label>Building / unit detail <input id="settingsBuilding" type="text" value="${escapeHtml(s.building)}" /></label>
-        </div>
-        <div class="owner-row">
-          <label>Check-in <input id="settingsCheckIn" type="text" value="${escapeHtml(s.checkIn)}" /></label>
-          <label>Check-out <input id="settingsCheckOut" type="text" value="${escapeHtml(s.checkOut)}" /></label>
-        </div>
-        <label>Security deposit <input id="settingsSecurityDeposit" type="text" value="${escapeHtml(s.securityDeposit)}" /></label>
-        <label>Parking note <textarea id="settingsParking">${escapeHtml(s.parking)}</textarea></label>
-        <div class="owner-row">
-          <label>Car parking rate <input id="settingsCarRate" type="text" value="${escapeHtml(s.parkingRates.car)}" /></label>
-          <label>Motorcycle parking rate <input id="settingsMotorRate" type="text" value="${escapeHtml(s.parkingRates.motorcycle)}" /></label>
-        </div>
-        <label>Nearby places <textarea id="settingsNearby">${escapeHtml(listToTextarea(s.nearby))}</textarea></label>
-        <label>Pricing guide <textarea id="settingsPricing">${escapeHtml(listToTextarea(s.pricing))}</textarea></label>
-        <label>Booking requirements <textarea id="settingsBookingRequirements">${escapeHtml(listToTextarea(s.bookingRequirements))}</textarea></label>
-        <label>Self check-in steps <textarea id="settingsSelfCheckIn">${escapeHtml(listToTextarea(s.selfCheckIn))}</textarea></label>
-        <label>Checkout reminders <textarea id="settingsCheckout">${escapeHtml(listToTextarea(s.checkout))}</textarea></label>
-        <label>House rules <textarea id="settingsHouseRules">${escapeHtml(listToTextarea(s.houseRules))}</textarea></label>
-        <label>Google Maps URL <input id="settingsGoogleMapsUrl" type="text" value="${escapeHtml(s.googleMapsUrl || CONFIG.googleMapsUrl)}" /></label>
-        <label>Waze URL <input id="settingsWazeUrl" type="text" value="${escapeHtml(s.wazeUrl || CONFIG.wazeUrl)}" /></label>
+
         <div class="owner-actions-row">
           <button class="btn btn-primary owner-sm" type="submit">Save settings</button>
           <button class="btn btn-secondary owner-sm" type="button" id="ownerSettingsReset">Reset defaults</button>
@@ -1040,9 +1430,19 @@
           <button class="btn btn-secondary owner-sm" type="button" id="ownerSettingsImportBtn">Import JSON</button>
           <input type="file" id="ownerSettingsImport" accept="application/json" hidden />
         </div>
-        <p class="muted">Changes are saved in this browser and can be exported as JSON for backup or handover.</p>
       </form>
     `;
+
+    $$('#ownerSettingsList [data-jump-settings]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const targetId = button.dataset.jumpSettings;
+        const target = document.getElementById(targetId);
+        if (!target) return;
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        target.classList.add('flash-focus');
+        window.setTimeout(() => target.classList.remove('flash-focus'), 1200);
+      });
+    });
 
     $('#ownerSettingsForm')?.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -1075,6 +1475,8 @@
         houseRules: $('#settingsHouseRules')?.value,
         googleMapsUrl: $('#settingsGoogleMapsUrl')?.value,
         wazeUrl: $('#settingsWazeUrl')?.value,
+        contactEmail: $('#settingsContactEmail')?.value,
+        contactPhone: $('#settingsContactPhone')?.value,
       });
       state.settings = next;
       persistSettings();
@@ -1104,6 +1506,7 @@
         amenities: state.amenities,
         media: state.media,
         comments: state.comments,
+        bookings: state.bookings,
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -1134,7 +1537,9 @@
           applySettingsToPublicUI();
           renderGuide();
           renderOwnerSettings();
-          renderAmenities();
+          renderOwnerCalendar();
+          renderOwnerBookings();
+          renderOwnerAccounting();
           renderOwnerAmenities();
           renderGallery();
           renderVideos();
@@ -2583,6 +2988,12 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
       }
     });
 
+    document.addEventListener('click', (e) => {
+      const button = e.target.closest('[data-cms-target]');
+      if (!button) return;
+      focusCmsTarget(button.dataset.cmsTarget || '');
+    });
+
     $('#closeOwnerModal')?.addEventListener('click', closeOwnerLogin);
     $('#ownerLoginModal')?.addEventListener('click', (e) => {
       if (e.target.id === 'ownerLoginModal') closeOwnerLogin();
@@ -2601,6 +3012,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     renderComments();
     renderChatSuggestions(LUNA_DEFAULT_SUGGESTIONS);
     setBookingDateBounds();
+    fetchAvailability().catch(() => {});
     updateBookingPricingUI();
     setupMap();
     syncTopbarOffset();

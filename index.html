@@ -282,56 +282,86 @@
   </main>
 
   <section class="section owner-panel hidden" id="ownerPanel" aria-hidden="true">
-    <div class="section-head">
+    <div class="section-head owner-dashboard-head">
       <span>Owner dashboard</span>
       <h2>Manage the property from one shared CMS</h2>
-      <p>Bookings, accounting, pricing, reviews, amenities, and site settings all read from the same saved data.</p>
+      <p>Edit the content below, then press Save settings to publish everything at once.</p>
     </div>
+    <div class="owner-cms-map" id="ownerCmsMap"></div>
     <div class="owner-grid">
-      <article class="owner-card owner-card-wide">
+      <article class="owner-card owner-card-wide" id="ownerBookingsCard">
         <div class="owner-card-head">
-          <h3>Booking ledger</h3>
-          <p>Confirmed reservations from Supabase with review status, check-in, checkout, and actions.</p>
+          <div>
+            <h3>Booking ledger</h3>
+            <p>Confirmed reservations from Supabase with review status, check-in, checkout, and actions.</p>
+          </div>
+          <button type="button" class="btn btn-secondary owner-sm" data-cms-target="#ownerBookingsList">Open</button>
         </div>
         <div id="ownerBookingsList"></div>
       </article>
 
-      <article class="owner-card owner-card-wide">
+      <article class="owner-card owner-card-wide" id="ownerAccountingCard">
         <div class="owner-card-head">
-          <h3>Earnings summary</h3>
-          <p>Weekly, monthly, and yearly earnings from confirmed bookings only.</p>
+          <div>
+            <h3>Earnings summary</h3>
+            <p>Weekly, monthly, and yearly earnings from confirmed bookings only.</p>
+          </div>
+          <button type="button" class="btn btn-secondary owner-sm" data-cms-target="#ownerAccountingList">Open</button>
         </div>
         <div id="ownerAccountingList"></div>
       </article>
 
-      <article class="owner-card">
+      <article class="owner-card owner-card-wide" id="ownerCalendarCard">
         <div class="owner-card-head">
-          <h3>Property settings</h3>
-          <p>Edit location, prices, capacity, and policies from one form.</p>
+          <div>
+            <h3>Availability calendar</h3>
+            <p>Block dates, mark maintenance, and view reserved nights at a glance.</p>
+          </div>
+          <button type="button" class="btn btn-secondary owner-sm" data-cms-target="#ownerCalendarList">Edit</button>
+        </div>
+        <div id="ownerCalendarList"></div>
+      </article>
+
+      <article class="owner-card" id="ownerSettingsCard">
+        <div class="owner-card-head">
+          <div>
+            <h3>Property settings</h3>
+            <p>Edit hero copy, pricing, location, guide, and site settings from one form.</p>
+          </div>
+          <button type="button" class="btn btn-secondary owner-sm" data-cms-target="#ownerSettingsList">Edit</button>
         </div>
         <div id="ownerSettingsList"></div>
       </article>
 
-      <article class="owner-card">
+      <article class="owner-card" id="ownerAmenityCard">
         <div class="owner-card-head">
-          <h3>Amenity manager</h3>
-          <p>Add, edit, hide, or delete amenity cards.</p>
+          <div>
+            <h3>Amenity manager</h3>
+            <p>Add, edit, hide, restore, or delete amenity cards.</p>
+          </div>
+          <button type="button" class="btn btn-secondary owner-sm" data-cms-target="#ownerAmenityList">Edit</button>
         </div>
         <div id="ownerAmenityList"></div>
       </article>
 
-      <article class="owner-card">
+      <article class="owner-card" id="ownerReviewCard">
         <div class="owner-card-head">
-          <h3>Review manager</h3>
-          <p>Add, edit, feature, hide, or delete guest comments.</p>
+          <div>
+            <h3>Review manager</h3>
+            <p>Add, edit, feature, hide, or delete guest comments.</p>
+          </div>
+          <button type="button" class="btn btn-secondary owner-sm" data-cms-target="#ownerReviewList">Edit</button>
         </div>
         <div id="ownerReviewList"></div>
       </article>
 
-      <article class="owner-card">
+      <article class="owner-card" id="ownerMediaCard">
         <div class="owner-card-head">
-          <h3>Media manager</h3>
-          <p>Feature, hide, restore, or delete gallery media from the existing set.</p>
+          <div>
+            <h3>Media manager</h3>
+            <p>Feature, hide, restore, or delete gallery media from the existing set.</p>
+          </div>
+          <button type="button" class="btn btn-secondary owner-sm" data-cms-target="#ownerMediaList">Edit</button>
         </div>
         <div id="ownerMediaList"></div>
       </article>

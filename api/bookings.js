@@ -89,7 +89,7 @@ function toIsoDate(date) {
 }
 
 function normalizeBooking(row) {
-  const bookingRef = String(row.booking_ref || row.booking_reference || row.bookingId || row.id || '').trim();
+  const bookingRef = String(row.booking_reference || row.bookingId || row.id || '').trim();
   return {
     id: row.id || bookingRef,
     bookingRef,
@@ -120,6 +120,11 @@ function isRevenueStatus(status) {
   return ['confirmed', 'completed', 'checked_out'].includes(String(status || '').toLowerCase());
 }
 
+function isManagementStatus(status) {
+  const key = String(status || '').toLowerCase();
+  return ['blocked', 'maintenance', 'owner_stay'].includes(key);
+}
+
 function summarizeBookings(bookings) {
   const now = new Date();
   const today = getTodayUTCDate();
@@ -131,9 +136,10 @@ function summarizeBookings(bookings) {
   const nextYear = new Date(Date.UTC(now.getUTCFullYear() + 1, 0, 1));
 
   const arrivalsWindowEnd = addUtcDays(today, 7);
+  const guestBookings = bookings.filter((booking) => !isManagementStatus(booking.status));
 
   const summary = {
-    totalBookings: bookings.length,
+    totalBookings: guestBookings.length,
     confirmedBookings: 0,
     completedBookings: 0,
     cancelledBookings: 0,
@@ -149,7 +155,7 @@ function summarizeBookings(bookings) {
     lifetimeRevenue: 0,
   };
 
-  for (const booking of bookings) {
+  for (const booking of guestBookings) {
     const status = String(booking.status || 'confirmed').toLowerCase();
     const total = Number(booking.total || 0) || 0;
     const checkin = parseBookingDate(booking.checkin);
@@ -278,7 +284,7 @@ module.exports = async function handler(req, res) {
       const { data: existingRows, error: selectError } = await supabase
         .from('bookings')
         .select('*')
-        .or(`booking_ref.eq.${bookingRef},booking_reference.eq.${bookingRef},id.eq.${bookingRef}`)
+        .or(`booking_reference.eq.${bookingRef},id.eq.${bookingRef}`)
         .limit(1);
 
       if (selectError) {
@@ -293,7 +299,34 @@ module.exports = async function handler(req, res) {
       const nextPatch = { updated_at: new Date().toISOString() };
       let emailMessage = null;
 
-      if (action === 'send_review_invitation') {
+      if (action === 'block_date') {
+        const blockType = String(body.type || 'blocked').trim().toLowerCase();
+        const blockDate = String(body.date || body.checkin || '').trim();
+        const note = String(body.note || '').trim();
+        if (!blockDate) return res.status(400).json({ error: 'Missing block date' });
+        const start = parseBookingDate(blockDate);
+        if (!start) return res.status(400).json({ error: 'Invalid block date' });
+        const end = addUtcDays(start, 1);
+        const ref = `BLOCK-${toIsoDate(start).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        const blockRow = {
+          id: ref,
+          booking_reference: ref,
+          guest_name: blockType === 'owner_stay' ? 'Owner stay' : blockType === 'maintenance' ? 'Maintenance' : 'Blocked',
+          checkin: toIsoDate(start),
+          checkout: toIsoDate(end),
+          guests: 0,
+          status: blockType,
+          confirmed_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        };
+        if (note) blockRow.note = note;
+        const { error: insertError } = await supabase.from('bookings').insert([blockRow]);
+        if (insertError) return res.status(500).json({ error: insertError.message || 'Failed to save blocked date' });
+        return res.status(200).json({ ok: true, bookingRef: ref, status: blockType });
+      } else if (action === 'send_review_invitation') {
+        if (!['completed', 'checked_out'].includes(existing.status)) {
+          return res.status(400).json({ error: 'Review invitations can only be sent after checkout' });
+        }
         nextPatch.review_invitation_sent = true;
         nextPatch.review_invitation_sent_at = new Date().toISOString();
         emailMessage = 'Review invitation sent';
@@ -311,7 +344,7 @@ module.exports = async function handler(req, res) {
       const { error: updateError } = await supabase
         .from('bookings')
         .update(nextPatch)
-        .or(`booking_ref.eq.${bookingRef},booking_reference.eq.${bookingRef},id.eq.${bookingRef}`);
+        .or(`booking_reference.eq.${bookingRef},id.eq.${bookingRef}`);
 
       if (updateError) {
         return res.status(500).json({ error: updateError.message || 'Failed to update booking' });

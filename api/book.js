@@ -100,27 +100,52 @@ module.exports = async function handler(req, res) {
     if (typeof getSupabase === 'function') {
       try {
         const supabase = getSupabase();
-        const bookingRow = {
-          booking_ref: bookingRef,
-          guest_name: guestName,
-          guest_email: guestEmail,
-          guest_phone: guestPhone || null,
-          checkin,
-          checkout,
-          guests: Number(guests),
-          pets: Number(pets || 0),
-          note: note || null,
-          pricing,
-          total: pricing ? Number(pricing.total ?? pricing.summary?.total ?? 0) : null,
-          status: 'confirmed',
-          confirmed_at: new Date().toISOString(),
-          review_token: reviewToken,
-          review_submitted: false,
-          review_invitation_sent: false,
-          created_at: new Date().toISOString(),
-        };
-        const { error: bookingError } = await supabase.from('bookings').insert([bookingRow]);
-        persistedBooking = !bookingError;
+        const createdAt = new Date().toISOString();
+        const confirmedAt = createdAt;
+        const totalAmount = pricing ? Number(pricing.total ?? pricing.summary?.total ?? 0) : null;
+        const attempts = [
+          {
+            booking_reference: bookingRef,
+            guest_name: guestName,
+            guest_email: guestEmail,
+            guest_phone: guestPhone || null,
+            checkin,
+            checkout,
+            guests: Number(guests),
+            pets: Number(pets || 0),
+            note: note || null,
+            pricing,
+            total: totalAmount,
+            status: 'confirmed',
+            confirmed_at: confirmedAt,
+            review_token: reviewToken,
+            review_submitted: false,
+            review_invitation_sent: false,
+            created_at: createdAt,
+          },
+          {
+            booking_reference: bookingRef,
+            guest_name: guestName,
+            guest_email: guestEmail,
+            checkin,
+            checkout,
+            guests: Number(guests),
+            status: 'confirmed',
+            confirmed_at: confirmedAt,
+            review_token: reviewToken,
+            review_submitted: false,
+            review_invitation_sent: false,
+            created_at: createdAt,
+          },
+        ];
+
+        for (const bookingRow of attempts) {
+          const { error: bookingError } = await supabase.from('bookings').insert([bookingRow]);
+          if (!bookingError) {
+            persistedBooking = true;
+            break;
+          }
+        }
       } catch (_) {
         persistedBooking = false;
       }
