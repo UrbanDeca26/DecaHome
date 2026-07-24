@@ -107,6 +107,94 @@
     const pending = state.inquiries.filter((item) => String(item.status || 'pending').toLowerCase() !== 'resolved');
     return { upcoming, departures, pending };
   }
+  function summarizePricing(settings = state.settings) {
+    const weekdayRate = Number(settings.weekdayRate || 0);
+    const weekendRate = Number(settings.weekendRate || 0);
+    const includedGuests = Number(settings.includedGuests || 1);
+    const extraGuestFee = Number(settings.extraGuestFee || 0);
+    const petFee = Number(settings.petFee || 0);
+    const maxGuests = Number(settings.maxGuests || settings.guestCapacity || 1);
+    const maxPets = Number(settings.maxPets || 0);
+
+    // A simple transparent sample that matches the live calculator rules.
+    const sampleNights = [
+      { label: 'Weekday night', rate: weekdayRate },
+      { label: 'Weekday night', rate: weekdayRate },
+      { label: 'Weekend night', rate: weekendRate },
+    ];
+    const baseRate = sampleNights.reduce((sum, item) => sum + item.rate, 0);
+    const sampleGuests = Math.min(maxGuests, Math.max(includedGuests + 1, includedGuests));
+    const extraGuests = Math.max(0, sampleGuests - includedGuests);
+    const extraGuestCharge = extraGuests * extraGuestFee * sampleNights.length;
+    const samplePets = Math.min(maxPets, 1);
+    const petCharge = samplePets * petFee * sampleNights.length;
+    const total = baseRate + extraGuestCharge + petCharge;
+
+    return {
+      sampleNights,
+      baseRate,
+      sampleGuests,
+      extraGuests,
+      extraGuestCharge,
+      samplePets,
+      petCharge,
+      total,
+      includedGuests,
+      maxGuests,
+      maxPets,
+      weekdayRate,
+      weekendRate,
+      extraGuestFee,
+      petFee,
+    };
+  }
+
+  function pricingLine(label, value) {
+    return `<div class="pricing-line"><span>${S.escapeHtml(label)}</span><strong>${S.escapeHtml(value)}</strong></div>`;
+  }
+
+  function buildCalendarSummary() {
+    const monthStart = state.calendarMonth;
+    const monthEnd = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1));
+    const monthKey = `${monthStart.getUTCFullYear()}-${String(monthStart.getUTCMonth() + 1).padStart(2, '0')}`;
+    const daysInMonth = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 0)).getUTCDate();
+    const blocked = new Map(state.blockedDates.map((item) => [item.date, item]));
+
+    const bookingsInMonth = state.bookings.filter((booking) => {
+      const dates = [booking.checkin, booking.checkout].filter(Boolean).map((value) => String(value).slice(0, 7));
+      if (dates.some((value) => value === monthKey)) return true;
+      const checkin = new Date(`${booking.checkin}T00:00:00`);
+      const checkout = new Date(`${booking.checkout}T00:00:00`);
+      return !Number.isNaN(checkin.getTime()) && !Number.isNaN(checkout.getTime()) && checkin < monthEnd && checkout >= monthStart;
+    });
+
+    const summary = {
+      available: 0,
+      reserved: 0,
+      blocked: 0,
+      maintenance: 0,
+      owner: 0,
+    };
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const date = toISODate(new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), day)));
+      const block = blocked.get(date);
+      if (block) {
+        summary[block.type === 'maintenance' ? 'maintenance' : block.type === 'owner' ? 'owner' : 'blocked'] += 1;
+        continue;
+      }
+      const reserved = bookingsInMonth.some((booking) => {
+        const checkin = new Date(`${booking.checkin}T00:00:00`);
+        const checkout = new Date(`${booking.checkout}T00:00:00`);
+        const current = new Date(`${date}T00:00:00`);
+        return !Number.isNaN(checkin.getTime()) && !Number.isNaN(checkout.getTime()) && current >= checkin && current < checkout && String(booking.status || '').toLowerCase() !== 'cancelled';
+      });
+      if (reserved) summary.reserved += 1;
+      else summary.available += 1;
+    }
+
+    return { summary, bookingsInMonth };
+  }
 
   function renderDashboard() {
     const kpis = $('#dashboardKpis');
@@ -309,33 +397,65 @@
     title.textContent = S.monthTitle(monthStart);
     const startWeekday = new Date(monthStart.getTime()).getUTCDay();
     const daysInMonth = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 0)).getUTCDate();
-    const todayIso = S.toISODate(new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate())));
     const blocked = blockedDateMap();
+    const { summary, bookingsInMonth } = buildCalendarSummary();
+
+    const summaryCards = [
+      { label: 'Available', value: summary.available, tone: 'available' },
+      { label: 'Reserved', value: summary.reserved, tone: 'reserved' },
+      { label: 'Blocked', value: summary.blocked, tone: 'blocked' },
+      { label: 'Maintenance', value: summary.maintenance, tone: 'maintenance' },
+      { label: 'Owner stay', value: summary.owner, tone: 'owner' },
+    ].map((item) => `
+      <div class="calendar-summary-card">
+        <span class="badge ${item.tone}">${S.escapeHtml(item.label)}</span>
+        <strong>${S.escapeHtml(String(item.value))}</strong>
+      </div>
+    `).join('');
 
     const cells = [
-      'Sun','Mon','Tue','Wed','Thu','Fri','Sat'
-    ].map((w) => `<div class="calendar-weekday">${w}</div>`);
+      ...['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((w) => `<div class="calendar-weekday">${w}</div>`),
+    ];
 
     for (let i = 0; i < startWeekday; i += 1) {
-      cells.push('<div class="calendar-day" style="opacity:.35; pointer-events:none;"></div>');
+      cells.push('<div class="calendar-day calendar-placeholder" aria-hidden="true"></div>');
     }
 
     for (let day = 1; day <= daysInMonth; day += 1) {
       const date = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), day));
-      const iso = S.toISODate(date);
-      const status = dateStatus(iso);
-      const isToday = iso === todayIso;
-      const data = blocked.get(iso);
-      const label = status === 'available' ? 'Available' : status.charAt(0).toUpperCase() + status.slice(1);
+      const dateIso = toISODate(date);
+      const isToday = dateIso === toISODate(new Date());
+      const data = blocked[dateIso];
+      let label = 'Available';
+      let cls = 'calendar-day';
+      if (data) {
+        label = data.type || 'Blocked';
+        cls += ` is-${data.type || 'blocked'}`;
+      } else {
+        const booking = bookingsInMonth.find((item) => {
+          const checkin = new Date(`${item.checkin}T00:00:00`);
+          const checkout = new Date(`${item.checkout}T00:00:00`);
+          return !Number.isNaN(checkin.getTime()) && !Number.isNaN(checkout.getTime()) && date >= checkin && date < checkout && String(item.status || '').toLowerCase() !== 'cancelled';
+        });
+        if (booking) {
+          label = booking.status || 'Reserved';
+          cls += ' is-reserved';
+        }
+      }
+      if (isToday) cls += ' is-today';
       cells.push(`
-        <button class="calendar-day ${isToday ? 'is-today' : ''} is-${status}" type="button" data-calendar-date="${iso}">
+        <button class="${cls}" data-calendar-date="${dateIso}" type="button">
           <span class="day-num">${day}</span>
-          <span class="day-meta">${label}${data?.note ? `<br>${S.escapeHtml(data.note)}` : ''}</span>
+          <span class="day-meta">${S.escapeHtml(label)}${data?.note ? `<br>${S.escapeHtml(data.note)}` : ''}</span>
         </button>
       `);
     }
 
-    grid.innerHTML = cells.join('');
+    grid.innerHTML = [
+      `<div class="calendar-summary">${summaryCards}</div>`,
+      ...cells,
+    ].join('');
+
     blockedList.innerHTML = state.blockedDates.length ? state.blockedDates.map((item) => `
       <div class="card-item">
         <div class="card-item-head">
@@ -389,20 +509,67 @@
     $('#maxGuestsInput').value = state.settings.maxGuests;
     $('#maxPetsInput').value = state.settings.maxPets;
 
+    const snapshot = summarizePricing(state.settings);
     const preview = $('#pricingPreview');
     preview.innerHTML = [
       `
-        <div class="card-item"><div class="card-item-head"><strong>Weekday rate</strong><span>${S.escapeHtml(S.formatCurrency(state.settings.weekdayRate))}</span></div><p>Used for Monday to Thursday nights.</p></div>`,
+        <div class="card-item pricing-example">
+          <div class="card-item-head">
+            <div>
+              <strong>Current pricing snapshot</strong>
+              <span>Shared source for hero card, booking modal, email receipts, and Luna</span>
+            </div>
+            <span class="badge success">Live</span>
+          </div>
+          <div class="pricing-preview-grid">
+            <div class="pricing-mini">
+              <span>Weekday rate</span>
+              <strong>${S.escapeHtml(S.formatCurrency(state.settings.weekdayRate))}</strong>
+            </div>
+            <div class="pricing-mini">
+              <span>Weekend rate</span>
+              <strong>${S.escapeHtml(S.formatCurrency(state.settings.weekendRate))}</strong>
+            </div>
+            <div class="pricing-mini">
+              <span>Included guests</span>
+              <strong>${S.escapeHtml(String(state.settings.includedGuests))}</strong>
+            </div>
+            <div class="pricing-mini">
+              <span>Limits</span>
+              <strong>${S.escapeHtml(String(state.settings.maxGuests))} guests / ${S.escapeHtml(String(state.settings.maxPets))} pets</strong>
+            </div>
+          </div>
+        </div>`,
       `
-        <div class="card-item"><div class="card-item-head"><strong>Weekend rate</strong><span>${S.escapeHtml(S.formatCurrency(state.settings.weekendRate))}</span></div><p>Used for Friday, Saturday, and Sunday nights.</p></div>`,
+        <div class="card-item pricing-example">
+          <div class="card-item-head">
+            <div>
+              <strong>Example stay breakdown</strong>
+              <span>Sample 3-night booking used to preview the math</span>
+            </div>
+          </div>
+          <div class="pricing-breakdown">
+            ${pricingLine('2 weekday nights', S.formatCurrency(snapshot.weekdayRate * 2))}
+            ${pricingLine('1 weekend night', S.formatCurrency(snapshot.weekendRate))}
+            ${pricingLine(`${snapshot.extraGuests} extra guest${snapshot.extraGuests === 1 ? '' : 's'}`, snapshot.extraGuestCharge ? S.formatCurrency(snapshot.extraGuestCharge) : 'Included')}
+            ${pricingLine(`${snapshot.samplePets} pet`, snapshot.petCharge ? S.formatCurrency(snapshot.petCharge) : 'Included')}
+            <div class="pricing-total">
+              <span>TOTAL</span>
+              <strong>${S.escapeHtml(S.formatCurrency(snapshot.total))}</strong>
+            </div>
+          </div>
+        </div>`,
       `
-        <div class="card-item"><div class="card-item-head"><strong>Included guests</strong><span>${S.escapeHtml(String(state.settings.includedGuests))}</span></div><p>Guests included before extra guest fees apply.</p></div>`,
-      `
-        <div class="card-item"><div class="card-item-head"><strong>Extra guest fee</strong><span>${S.escapeHtml(S.formatCurrency(state.settings.extraGuestFee))}</span></div><p>Per night, per extra guest.</p></div>`,
-      `
-        <div class="card-item"><div class="card-item-head"><strong>Pet fee</strong><span>${S.escapeHtml(S.formatCurrency(state.settings.petFee))}</span></div><p>Per night, per pet.</p></div>`,
-      `
-        <div class="card-item"><div class="card-item-head"><strong>Maximum limits</strong><span>${state.settings.maxGuests} guests / ${state.settings.maxPets} pets</span></div><p>Hard limits used by the hero booking calculator.</p></div>`,
+        <div class="card-item pricing-example">
+          <div class="card-item-head"><div><strong>Rules in use</strong><span>Booking math stays in sync with the guest flow</span></div></div>
+          <div class="pricing-rules">
+            <span class="badge available">Weekdays</span>
+            <span class="badge owner">Weekends</span>
+            <span class="badge info">Included: ${S.escapeHtml(String(snapshot.includedGuests))}</span>
+            <span class="badge warning">Max guests: ${S.escapeHtml(String(snapshot.maxGuests))}</span>
+            <span class="badge warning">Max pets: ${S.escapeHtml(String(snapshot.maxPets))}</span>
+          </div>
+        </div>`,
     ].join('');
   }
 
