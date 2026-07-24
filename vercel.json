@@ -2,28 +2,22 @@
   "version": 2,
   "cleanUrls": true,
   "trailingSlash": false,
-  "rewrites": [
-    { "source": "/api/admin-login", "destination": "/api/router?action=admin-login" },
-    { "source": "/api/admin-logout", "destination": "/api/router?action=admin-logout" },
-    { "source": "/api/admin-status", "destination": "/api/router?action=admin-status" },
-    { "source": "/api/book", "destination": "/api/router?action=book" },
-    { "source": "/api/bookings", "destination": "/api/router?action=bookings" },
-    { "source": "/api/chat", "destination": "/api/router?action=chat" },
-    { "source": "/api/chat-inquiry", "destination": "/api/router?action=chat-inquiry" },
-    { "source": "/api/media-upload", "destination": "/api/router?action=media-upload" },
-    { "source": "/api/media-delete", "destination": "/api/router?action=media-delete" },
-    { "source": "/api/reviews-list", "destination": "/api/router?action=reviews-list" },
-    { "source": "/api/reviews-submit", "destination": "/api/router?action=reviews-submit" },
-    { "source": "/api/reviews-verify", "destination": "/api/router?action=reviews-verify" },
-    { "source": "/api/reviews-invite", "destination": "/api/router?action=reviews-invite" }
-  ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
       ]
     }
   ]

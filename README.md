@@ -1,63 +1,180 @@
+# Luxury Stay Property Management System
 
-# Luxury Stay
+Luxury Stay is a single-property booking website with a CMS-style owner dashboard backed by Supabase.
 
-Single-page condo booking site with:
-- Premium hero video
-- Glass-style, owner-editable amenities
-- Gallery and video walkthroughs
-- Exact location and nearby landmarks
-- Booking requirements, pricing, and house rules
-- Self check-in and checkout guide
-- Guest review comments
-- Google Maps and Waze links
-- Groq-powered concierge endpoint
-- Owner login at the bottom of the page
-- Guest review manager
-- Media manager for photos and videos
-- Booking email endpoint
+The public website is read-only for guests. The owner dashboard is the editable control center for the property's content, pricing, bookings, and reviews.
 
-## Required environment variables for deployment
+## Architecture
 
-For the booking inquiry email endpoint:
+```text
+Public Website
+      │
+      ▼
+Supabase Database
+      ▲
+      │
+Admin Dashboard
+```
+
+## What the public site does
+
+The public site displays:
+
+- Hero section
+- Live booking calculator
+- Gallery
+- Amenities
+- Stay guide
+- Reviews
+- Luna concierge
+- Footer and contact links
+
+## What the admin dashboard manages
+
+The owner dashboard is the source of truth for:
+
+- Property settings
+- Hero copy and booking labels
+- Pricing manager
+- Booking ledger
+- Earnings summary
+- Availability calendar
+- Amenities
+- Stay guide
+- Reviews
+- Luna AI knowledge
+- Site settings
+
+## Booking and accounting flow
+
+1. A guest confirms a booking.
+2. The booking is saved to Supabase.
+3. The booking reference and review token are generated.
+4. Confirmation emails are sent to the guest and owner.
+5. The admin dashboard reads the same booking record.
+6. Earnings are calculated from confirmed bookings only.
+
+### Accounting
+
+The dashboard shows automatic earnings totals for:
+
+- This week
+- This month
+- This year
+- Lifetime
+
+Only confirmed or completed bookings count toward revenue.
+
+## Pricing engine
+
+The pricing manager is the single source of truth.
+
+Editable values:
+
+- Weekday rate
+- Weekend rate
+- Included guests
+- Extra guest fee
+- Pet fee
+- Maximum guests
+- Maximum pets
+
+The public booking calculator, confirmation modal, booking emails, and admin booking summaries all read from the same saved values.
+
+## Reviews
+
+Verified guest reviews require:
+
+- Booking reference
+- Review token
+- Completed stay
+
+The owner can moderate reviews and send review invitations from the dashboard.
+
+## Gallery policy
+
+The gallery uses the existing asset set.
+
+The owner can:
+
+- Feature media
+- Hide/show media
+- Restore media
+- Delete media
+- Reorder media
+
+Uploading new media from the dashboard is disabled.
+
+## Booking API
+
+The booking flow uses:
+
+- `/api/book`
+- `/api/bookings`
+- `/api/reviews-list`
+- `/api/reviews-submit`
+- `/api/chat`
+- `/api/chat-inquiry`
+- `/api/admin-login`
+- `/api/admin-status`
+- `/api/admin-logout`
+
+## Environment variables
+
+Required:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
 - `SMTP_HOST`
 - `SMTP_PORT`
 - `SMTP_USER`
 - `SMTP_PASS`
 - `BOOKING_TO`
-
-For the concierge:
 - `GROQ_API_KEY`
-
-For the owner login:
 - `ADMIN_PASSWORD`
-- `ADMIN_SECRET` (optional; defaults to `ADMIN_PASSWORD` if omitted)
+- `ADMIN_SECRET`
 
-## Location and guide content
+Optional:
 
-The site is configured for Urban Deca Homes Ortigas Extension, Pasig City, BLDG Q - Area 4/3.
+- `PUBLIC_SITE_URL` — used in review invitation emails
 
-The AI concierge answers from the visible property details, including parking, pricing, house rules, booking requirements, check-in steps, and checkout reminders.
+## Supabase tables expected
 
-## Amenities
+The code expects at least:
 
-Amenities are stored in the browser so the owner can add, hide, edit, or delete them from the dashboard without changing code.
+### `bookings`
 
-## Media
+Typical fields:
 
-Videos are provided as MP4 files in the `assets` folder:
-- `tour-01.mp4`
-- `tour-02.mp4`
+- `id`
+- `booking_ref`
+- `guest_name`
+- `guest_email`
+- `guest_phone`
+- `checkin`
+- `checkout`
+- `guests`
+- `pets`
+- `note`
+- `pricing`
+- `total`
+- `status`
+- `review_token`
+- `review_submitted`
+- `review_invitation_sent`
+- `created_at`
+- `confirmed_at`
+- `cancelled_at`
+- `checked_in_at`
+- `checked_out_at`
 
-## Notes
+### `reviews`
 
-The owner tools appear only after signing in from the bottom of the page. The review, media, and amenity managers update the site state in the browser for testing and content management flow.
+Used for verified reviews and moderation.
 
+## Development notes
 
-## Luna concierge
-
-The chat now acts as Luna, the virtual concierge. It routes guests to the correct site section and can send an inquiry email when the question is not listed on the page.
-
-
-## Replacement package
-
-This ZIP includes the complete set of files needed to replace the current site code.
+- The public site remains visually unchanged unless a shared source-of-truth field changes.
+- Admin actions should update the shared data first, then the public UI should read from that data.
+- If a booking is confirmed, it should appear in the booking ledger and accounting summaries.
+- The dashboard is meant to behave like a real CMS / PMS, not a static settings form.

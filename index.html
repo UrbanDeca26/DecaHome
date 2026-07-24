@@ -163,24 +163,67 @@
     </div>
 
     <section class="section reveal" id="reviews">
-      <div class="section-head row">
+      <div class="section-head">
+        <span>Guest reviews</span>
+        <h2>See what previous guests loved about their stay.</h2>
+      </div>
+      <div class="review-grid">
+        <article class="review-card">
+          <div class="stars">★★★★★</div>
+          <p>The place looks exactly like the photos. Very clean, organized, and easy to enjoy.</p>
+          <strong>Guest favorite</strong>
+        </article>
+        <article class="review-card">
+          <div class="stars">★★★★★</div>
+          <p>The layout, lighting, and finishes make the stay feel polished and comfortable.</p>
+          <strong>Top rated stay</strong>
+        </article>
+        <article class="review-card">
+          <div class="stars">★★★★★</div>
+          <p>Great for work trips and family weekends. Check-in was easy and everything was ready.</p>
+          <strong>Repeat guest</strong>
+        </article>
+      </div>
+
+      <div class="comment-shell">
         <div>
-          <span>Verified guest reviews</span>
-          <h2>Premium reviews from completed stays.</h2>
-          <p>Only guests with a completed stay and a valid review token can submit a review. Featured reviews appear first.</p>
+          <div class="section-head compact">
+            <span>Guest comments</span>
+            <h2>Leave a review</h2>
+          </div>
+          <div class="comment-list" id="commentList"></div>
         </div>
-        <button class="btn btn-secondary" id="leaveVerifiedReview" type="button">Leave a Verified Review</button>
-      </div>
 
-      <div class="review-carousel-shell">
-        <button class="review-nav review-prev" id="reviewPrev" type="button" aria-label="Previous reviews">‹</button>
-        <div class="review-carousel" id="reviewCarousel" tabindex="0" aria-label="Guest review carousel">
-          <div class="review-track" id="commentList"></div>
-        </div>
-        <button class="review-nav review-next" id="reviewNext" type="button" aria-label="Next reviews">›</button>
+        <form class="comment-form" id="commentForm">
+          <h3>Share your stay</h3>
+          <label>
+            Your name
+            <input id="commentName" type="text" placeholder="Your name" required />
+          </label>
+          <div class="row">
+            <label>
+              Rating
+              <select id="commentRating" required>
+                <option value="5">5 stars</option>
+                <option value="4">4 stars</option>
+                <option value="3">3 stars</option>
+                <option value="2">2 stars</option>
+                <option value="1">1 star</option>
+              </select>
+            </label>
+            <label>
+              Stay type
+              <input id="commentStayType" type="text" placeholder="Family trip, work trip..." />
+            </label>
+          </div>
+          <label>
+            Comment
+            <textarea id="commentText" placeholder="Tell future guests what you liked about the stay..." required></textarea>
+          </label>
+          <button class="btn btn-primary full" type="submit">Post comment</button>
+          <p class="muted">Comments are saved in this browser so you can test the section right away.</p>
+        </form>
       </div>
-
-      <p class="review-footnote">Verified Guest badges appear after booking and review token validation.</p>
     </section>
 
     <section class="section reveal concierge" id="concierge">
@@ -241,10 +284,26 @@
   <section class="section owner-panel hidden" id="ownerPanel" aria-hidden="true">
     <div class="section-head">
       <span>Owner dashboard</span>
-      <h2>Manage reviews, media, and amenities</h2>
-      <p>Update the listing content without touching the code.</p>
+      <h2>Manage the property from one shared CMS</h2>
+      <p>Bookings, accounting, pricing, reviews, amenities, and site settings all read from the same saved data.</p>
     </div>
     <div class="owner-grid">
+      <article class="owner-card owner-card-wide">
+        <div class="owner-card-head">
+          <h3>Booking ledger</h3>
+          <p>Confirmed reservations from Supabase with review status, check-in, checkout, and actions.</p>
+        </div>
+        <div id="ownerBookingsList"></div>
+      </article>
+
+      <article class="owner-card owner-card-wide">
+        <div class="owner-card-head">
+          <h3>Earnings summary</h3>
+          <p>Weekly, monthly, and yearly earnings from confirmed bookings only.</p>
+        </div>
+        <div id="ownerAccountingList"></div>
+      </article>
+
       <article class="owner-card">
         <div class="owner-card-head">
           <h3>Property settings</h3>
@@ -272,7 +331,7 @@
       <article class="owner-card">
         <div class="owner-card-head">
           <h3>Media manager</h3>
-          <p>Upload or remove photos and videos from the gallery.</p>
+          <p>Feature, hide, restore, or delete gallery media from the existing set.</p>
         </div>
         <div id="ownerMediaList"></div>
       </article>
@@ -367,83 +426,6 @@
           <p class="booking-success-reference">Reference <strong id="bookingSuccessRef">—</strong></p>
           <div class="booking-confirm-actions">
             <button class="btn btn-primary" id="closeBookingSuccess" type="button">Close</button>
-          </div>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <div class="site-modal review-modal" id="reviewVerifyModal" aria-hidden="true">
-    <div class="site-modal-card review-modal-card" role="dialog" aria-modal="true" aria-labelledby="reviewModalTitle">
-      <button class="site-modal-close" id="closeReviewModal" type="button" aria-label="Close verified review">×</button>
-      <div class="owner-modal-kicker">Verified guest review</div>
-      <h3 id="reviewModalTitle">Leave a Verified Review</h3>
-      <p class="review-modal-note">Enter your booking reference and review token to unlock the review form. Only completed stays can continue.</p>
-
-      <section class="review-step" id="reviewStepVerify">
-        <form class="review-verify-form" id="reviewVerifyForm">
-          <label>Booking reference
-            <input id="reviewBookingRef" type="text" autocomplete="off" placeholder="LS-20260724-0001" required />
-          </label>
-          <label>Review token
-            <input id="reviewToken" type="text" autocomplete="off" placeholder="Enter the token from your receipt" required />
-          </label>
-          <div class="booking-confirm-actions">
-            <button class="btn btn-secondary" id="reviewCancel" type="button">Cancel</button>
-            <button class="btn btn-primary" id="reviewVerifyBtn" type="submit">Verify booking</button>
-          </div>
-        </form>
-      </section>
-
-      <section class="review-step hidden" id="reviewStepCompose">
-        <div class="review-verified-summary">
-          <div class="review-summary-chip"><span>Booking Ref</span><strong id="reviewVerifiedRef">—</strong></div>
-          <div class="review-summary-chip"><span>Stay date</span><strong id="reviewVerifiedStay">—</strong></div>
-          <div class="review-summary-chip"><span>Guest</span><strong id="reviewVerifiedGuest">—</strong></div>
-          <div class="review-summary-chip"><span>Email</span><strong id="reviewVerifiedEmail">—</strong></div>
-        </div>
-        <form class="review-submit-form" id="reviewSubmitForm">
-          <input id="reviewVerifiedBookingRefInput" type="hidden" />
-          <input id="reviewVerifiedTokenInput" type="hidden" />
-          <div class="review-submit-grid">
-            <label>Guest name
-              <input id="reviewGuestName" type="text" autocomplete="name" required />
-            </label>
-            <label>Email
-              <input id="reviewGuestEmail" type="email" autocomplete="email" required />
-            </label>
-            <label>Rating
-              <select id="reviewRating" required>
-                <option value="5">5 stars</option>
-                <option value="4">4 stars</option>
-                <option value="3">3 stars</option>
-                <option value="2">2 stars</option>
-                <option value="1">1 star</option>
-              </select>
-            </label>
-            <label>Review title
-              <input id="reviewTitle" type="text" maxlength="120" placeholder="What stood out the most?" required />
-            </label>
-            <label class="span-2">Review message
-              <textarea id="reviewMessage" rows="5" placeholder="Tell future guests what you liked about the stay..." required></textarea>
-            </label>
-          </div>
-
-          <div class="booking-confirm-actions">
-            <button class="btn btn-secondary" id="reviewBack" type="button">Back</button>
-            <button class="btn btn-primary" id="reviewSubmitBtn" type="submit">Submit review</button>
-          </div>
-          <p class="review-modal-note">Your review will only publish after booking verification succeeds.</p>
-        </form>
-      </section>
-
-      <section class="review-step hidden" id="reviewStepSuccess">
-        <div class="review-success-card">
-          <div class="review-success-icon">✓</div>
-          <h4>Review submitted</h4>
-          <p>Thank you. Your verified review is now part of the property record.</p>
-          <div class="booking-confirm-actions">
-            <button class="btn btn-primary" id="closeReviewSuccess" type="button">Close</button>
           </div>
         </div>
       </section>
