@@ -11,6 +11,18 @@
     wazeUrl: 'https://waze.com/ul?q=Urban%20Deca%20Homes%20Ortigas%20Extension%2C%20Pasig%20City&navigate=yes',
   };
 
+  const LIVE_SYNC_CHANNEL = 'luxury_stay_sync_v1';
+  const LIVE_SYNC_PING_KEY = 'luxury_stay_sync_ping_v1';
+  const LIVE_SYNC_KEYS = new Set([
+    'luxury_stay_settings_v4',
+    'luxury_stay_media_v4',
+    'luxury_stay_amenities_v4',
+    'luxury_stay_reviews_v4',
+    'luxury_stay_blocked_dates_v1',
+    'luxury_stay_inquiries_v1',
+    LIVE_SYNC_PING_KEY,
+  ]);
+
   const PROPERTY = {
     name: 'Luxury Stay',
     area: 'Comfort • Convenience • Home Away From Home',
@@ -194,6 +206,7 @@
     editingAmenityId: null,
     pendingBookingPricing: null,
     pendingReview: null,
+    bookingDateListenersBound: false,
   };
 
   function loadJson(key, fallback) {
@@ -306,6 +319,25 @@
     persistComments();
     renderComments();
     renderOwnerComments();
+  }
+
+  async function refreshPublicContent(detail = {}) {
+    state.settings = normalizeSettings(loadJson('luxury_stay_settings_v4', PROPERTY));
+    state.media = loadJson('luxury_stay_media_v4', DEFAULT_MEDIA);
+    state.amenities = loadJson('luxury_stay_amenities_v4', DEFAULT_AMENITIES);
+
+    applySettingsToPublicUI();
+    renderGuide();
+    renderGallery();
+    renderVideos();
+    renderAmenities();
+    setupMap();
+    updateBookingPricingUI();
+    setBookingDateBounds();
+
+    if (detail.scope === 'reviews' || detail.scope === 'all' || detail.key === 'luxury_stay_reviews_v4') {
+      await loadPublicReviews();
+    }
   }
 
   function readFileAsDataUrl(file) {
@@ -1415,6 +1447,31 @@
     }
   }
 
+  function bindLiveSyncListeners() {
+    const syncFromDetail = (detail = {}) => {
+      refreshPublicContent(detail).catch(() => {});
+    };
+
+    window.addEventListener('storage', (event) => {
+      if (!event || !LIVE_SYNC_KEYS.has(event.key)) return;
+      syncFromDetail({ key: event.key, scope: event.key === 'luxury_stay_reviews_v4' ? 'reviews' : 'all' });
+    });
+
+    window.addEventListener('luxury-stay-sync', (event) => {
+      syncFromDetail(event.detail || {});
+    });
+
+    if (window.BroadcastChannel) {
+      try {
+        const channel = new BroadcastChannel(LIVE_SYNC_CHANNEL);
+        channel.onmessage = (event) => {
+          syncFromDetail(event.data || {});
+        };
+        state.syncChannel = channel;
+      } catch (_) {}
+    }
+  }
+
   function pushChat(role, text) {
     const log = $('#chatLog');
     if (!log) return;
@@ -1791,6 +1848,9 @@
     setBookingConfirmStage('review');
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
+    setBookingModalOpen(true);
+    const card = modal.querySelector('.booking-confirm-card');
+    if (card) card.scrollTop = 0;
     window.setTimeout(() => $('#bookingConfirmProceed')?.focus(), 50);
   }
 
@@ -1799,6 +1859,7 @@
     if (!modal) return;
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
+    setBookingModalOpen(false);
     $('#bookingConfirmForm')?.reset();
     state.pendingBookingPricing = null;
     setBookingConfirmStage('review');
@@ -1813,6 +1874,9 @@
       return;
     }
     setBookingConfirmStage('details');
+    const modal = $('#bookingConfirmModal');
+    const card = modal?.querySelector('.booking-confirm-card');
+    if (card) card.scrollTop = 0;
     window.setTimeout(() => $('#guestName')?.focus(), 50);
   }
 
@@ -1822,6 +1886,9 @@
     if (title) title.textContent = 'Booking confirmed';
     if (refEl) refEl.textContent = bookingRef || '—';
     setBookingConfirmStage('success');
+    const modal = $('#bookingConfirmModal');
+    const card = modal?.querySelector('.booking-confirm-card');
+    if (card) card.scrollTop = 0;
   }
 
   function openPriceDetailsModal(pricing) {
@@ -1868,6 +1935,11 @@
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
     if (body) body.innerHTML = '';
+  }
+
+
+  function setBookingModalOpen(isOpen) {
+    document.body.classList.toggle('modal-open', !!isOpen);
   }
 
   function resetBookingForm(options = {}) {
@@ -1928,6 +2000,8 @@
     };
 
     syncCheckoutMin();
+    if (state.bookingDateListenersBound) return;
+    state.bookingDateListenersBound = true;
     checkin.addEventListener('change', syncCheckoutMin);
     checkin.addEventListener('input', syncCheckoutMin);
     checkout.addEventListener('change', updateBookingPricingUI);
@@ -2717,6 +2791,7 @@ If you are testing locally, make sure the /api/book route is available and SMTP 
     setupRevealObserver();
     bindPublicEvents();
     bindOwnerEvents();
+    bindLiveSyncListeners();
     maybePrefillReviewModalFromQuery();
     ensureOwnerSectionVisible();
     syncAdminStatus();

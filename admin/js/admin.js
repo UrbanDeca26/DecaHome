@@ -205,6 +205,43 @@
     return { summary, bookingsInMonth };
   }
 
+  function broadcastUpdate(scope, keys = []) {
+    if (S.notifySync) {
+      S.notifySync({ scope, keys });
+    }
+  }
+
+  function restorePricingDefaults() {
+    const defaults = S.clone(S.DEFAULT_SETTINGS);
+    state.settings.weekdayRate = defaults.weekdayRate;
+    state.settings.weekendRate = defaults.weekendRate;
+    state.settings.includedGuests = defaults.includedGuests;
+    state.settings.extraGuestFee = defaults.extraGuestFee;
+    state.settings.petFee = defaults.petFee;
+    state.settings.maxGuests = defaults.maxGuests;
+    state.settings.guestCapacity = defaults.maxGuests;
+    state.settings.maxPets = defaults.maxPets;
+    S.saveSettings(state.settings);
+    renderPricing();
+    renderSettings();
+    renderDashboard();
+    broadcastUpdate('pricing', ['weekdayRate', 'weekendRate', 'includedGuests', 'extraGuestFee', 'petFee', 'maxGuests', 'maxPets']);
+  }
+
+  function restoreMediaDefaults() {
+    state.media = S.clone(S.DEFAULT_MEDIA);
+    S.saveMedia(state.media);
+    renderMedia();
+    broadcastUpdate('media', ['media']);
+  }
+
+  function restoreAmenitiesDefaults() {
+    state.amenities = S.clone(S.DEFAULT_AMENITIES);
+    S.saveAmenities(state.amenities);
+    renderAmenities();
+    broadcastUpdate('amenities', ['amenities']);
+  }
+
   function renderDashboard() {
     const kpis = $('#dashboardKpis');
     const snapshot = $('#dashboardSnapshot');
@@ -368,6 +405,7 @@
     });
     await loadBookings();
     closeBookingModal();
+    broadcastUpdate('bookings', ['bookings']);
   }
 
   async function cancelSelectedBooking() {
@@ -380,6 +418,7 @@
     });
     await loadBookings();
     closeBookingModal();
+    broadcastUpdate('bookings', ['bookings']);
   }
 
   async function inviteSelectedBooking() {
@@ -500,12 +539,14 @@
     }
     S.saveBlockedDates(state.blockedDates);
     renderCalendar();
+    broadcastUpdate('availability', ['blockedDates']);
   }
 
   function removeBlockDate(dateIso) {
     state.blockedDates = state.blockedDates.filter((item) => item.date !== dateIso);
     S.saveBlockedDates(state.blockedDates);
     renderCalendar();
+    broadcastUpdate('availability', ['blockedDates']);
   }
 
   function clearBlockedDates() {
@@ -513,6 +554,7 @@
     state.blockedDates = [];
     S.saveBlockedDates(state.blockedDates);
     renderCalendar();
+    broadcastUpdate('availability', ['blockedDates']);
   }
 
   function renderPricing() {
@@ -893,6 +935,7 @@
         try {
           await S.apiFetch('/api/reviews-list', { method: 'POST', body: JSON.stringify({ action, id }) });
           await loadReviews();
+          broadcastUpdate('reviews', ['reviews']);
         } catch (err) {
           alert(err.message || 'Review action failed');
         }
@@ -949,6 +992,7 @@
     S.saveSettings(state.settings);
     renderGuide();
     renderDashboard();
+    broadcastUpdate('guide', ['settings']);
   }
 
   function saveLunaFromForm() {
@@ -961,6 +1005,7 @@
     S.saveSettings(state.settings);
     renderLuna();
     renderDashboard();
+    broadcastUpdate('luna', ['settings']);
   }
 
   function saveSettingsFromForm() {
@@ -994,6 +1039,7 @@
     S.saveSettings(state.settings);
     renderSettings();
     renderDashboard();
+    broadcastUpdate('settings', ['settings']);
   }
 
   async function saveMediaFromForm(e) {
@@ -1036,6 +1082,7 @@
     S.saveMedia(state.media);
     $('#mediaForm').reset();
     renderMedia();
+    broadcastUpdate('media', ['media']);
   }
 
   function saveAmenityFromForm(e) {
@@ -1063,6 +1110,7 @@
     S.saveAmenities(state.amenities);
     $('#amenityForm').reset();
     renderAmenities();
+    broadcastUpdate('amenities', ['amenities']);
   }
 
   function saveInquiryToLocalStorage(item) {
@@ -1145,6 +1193,7 @@
       S.saveAmenities(state.amenities);
       S.saveBlockedDates(state.blockedDates);
       S.saveInquiries(state.inquiries);
+      broadcastUpdate('all', ['settings', 'media', 'amenities', 'blockedDates', 'inquiries']);
       alert('All changes saved.');
     };
 
@@ -1178,6 +1227,9 @@
     $('#mediaForm')?.addEventListener('submit', saveMediaFromForm);
     $('#amenityForm')?.addEventListener('submit', saveAmenityFromForm);
     $('#clearAmenityBtn')?.addEventListener('click', () => { state.editingAmenityId = null; $('#amenityForm').reset(); });
+    $('#restorePricingDefaultsBtn')?.addEventListener('click', restorePricingDefaults);
+    $('#restoreMediaDefaultsBtn')?.addEventListener('click', restoreMediaDefaults);
+    $('#restoreAmenityDefaultsBtn')?.addEventListener('click', restoreAmenitiesDefaults);
 
     $('#prevMonthBtn')?.addEventListener('click', () => {
       state.calendarMonth = new Date(Date.UTC(state.calendarMonth.getUTCFullYear(), state.calendarMonth.getUTCMonth() - 1, 1));

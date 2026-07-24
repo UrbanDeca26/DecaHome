@@ -11,6 +11,33 @@
     theme: 'luxury_stay_theme_v1',
   };
 
+  const SYNC_CHANNEL = 'luxury_stay_sync_v1';
+  const SYNC_PING_KEY = 'luxury_stay_sync_ping_v1';
+
+  function notifySync(payload = {}) {
+    const message = {
+      ...payload,
+      ts: Date.now(),
+    };
+
+    try {
+      window.dispatchEvent(new CustomEvent('luxury-stay-sync', { detail: message }));
+    } catch (_) {}
+
+    try {
+      if (window.BroadcastChannel) {
+        if (!window.__luxuryStaySyncChannel) {
+          window.__luxuryStaySyncChannel = new BroadcastChannel(SYNC_CHANNEL);
+        }
+        window.__luxuryStaySyncChannel.postMessage(message);
+      }
+    } catch (_) {}
+
+    try {
+      localStorage.setItem(SYNC_PING_KEY, JSON.stringify(message));
+    } catch (_) {}
+  }
+
   const DEFAULT_SETTINGS = {
     propertyName: 'Luxury Stay',
     name: 'Luxury Stay',
@@ -445,5 +472,8 @@
     getCookies,
     normalizeSettings,
     normalizeTextList,
+    SYNC_CHANNEL,
+    SYNC_PING_KEY,
+    notifySync,
   };
 })();
